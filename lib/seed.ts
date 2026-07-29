@@ -69,6 +69,7 @@ export function createInitialState(now = new Date()): VocabularyState {
   dueTime.setSeconds(0, 0);
 
   return {
+    version: 2,
     words: seedWords.map((word, index) => ({
       id: `seed-${index + 1}`,
       ...word,
@@ -76,10 +77,18 @@ export function createInitialState(now = new Date()): VocabularyState {
       nextReviewAt: dueTime.toISOString(),
       stage: 0,
       reviewCount: 0,
+      level: "B1",
+      source: "seed",
+      introducedAt: new Date(now.getTime() - index * 60_000).toISOString(),
+      spellingAttempts: 0,
+      spellingCorrect: 0,
+      contextReviewCount: 0,
     })),
     logs: [],
     settings: {
       dailyGoal: 8,
+      selectedLevel: "B1",
+      activePlan: null,
     },
   };
 }

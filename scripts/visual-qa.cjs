@@ -30,7 +30,10 @@ async function capture() {
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: "显示释义" }).click();
+  const firstTerm = await page.locator(".word-heading h2").innerText();
+  await page
+    .getByRole("button", { name: "想一想，再显示释义" })
+    .click();
   await page.waitForTimeout(300);
   await page.screenshot({
     path: path.join(outputDirectory, "iphone-answer.png"),
@@ -38,12 +41,20 @@ async function capture() {
   });
 
   await page.getByRole("button", { name: "认识" }).click();
+  await page.waitForTimeout(200);
+  await page.screenshot({
+    path: path.join(outputDirectory, "iphone-spelling.png"),
+    fullPage: true,
+  });
+  await page.getByPlaceholder("输入英文单词").fill(firstTerm);
+  await page.getByRole("button", { name: "检查拼写" }).click();
+  await page.getByRole("button", { name: "继续下一个" }).click();
   const storedAfterReview = await page.evaluate(() =>
-    window.localStorage.getItem("ciji-vocabulary-state-v1"),
+    window.localStorage.getItem("ciji-vocabulary-state-v2"),
   );
   await page.reload({ waitUntil: "networkidle" });
   const storedAfterReload = await page.evaluate(() =>
-    window.localStorage.getItem("ciji-vocabulary-state-v1"),
+    window.localStorage.getItem("ciji-vocabulary-state-v2"),
   );
 
   await page.getByRole("button", { name: "词库" }).click();
@@ -52,6 +63,22 @@ async function capture() {
     path: path.join(outputDirectory, "iphone-library.png"),
     fullPage: true,
   });
+
+  await page.getByRole("button", { name: "计划" }).click();
+  await page.waitForTimeout(250);
+  await page.screenshot({
+    path: path.join(outputDirectory, "iphone-plan.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "语境" }).click();
+  await page.waitForTimeout(250);
+  await page.screenshot({
+    path: path.join(outputDirectory, "iphone-context.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "词库" }).click();
 
   await page.getByRole("button", { name: "添加单词" }).click();
   await page.waitForTimeout(300);
@@ -78,12 +105,8 @@ async function capture() {
       .filter((button) => button.width < 44 || button.height < 44),
   );
 
-  const manifestResponse = await page.request.get(
-    `${baseUrl}/manifest.webmanifest`,
-  );
-  const serviceWorkerResponse = await page.request.get(
-    `${baseUrl}/sw.js`,
-  );
+  const manifestResponse = await page.request.get(`${baseUrl}/manifest.webmanifest`);
+  const serviceWorkerResponse = await page.request.get(`${baseUrl}/sw.js`);
 
   await page.getByRole("button", { name: "取消" }).click();
   await page.evaluate(() => navigator.serviceWorker.ready);

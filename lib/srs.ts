@@ -1,6 +1,7 @@
 import type {
   ReviewLog,
   ReviewRating,
+  StudyMode,
   VocabularyState,
   VocabularyWord,
 } from "./types";
@@ -25,6 +26,7 @@ export function reviewWord(
   word: VocabularyWord,
   rating: ReviewRating,
   now = new Date(),
+  mode: StudyMode = "recognition",
 ): ReviewResult {
   let nextStage = word.stage;
   let nextReviewAt: Date;
@@ -57,6 +59,7 @@ export function reviewWord(
       wordId: word.id,
       rating,
       reviewedAt: now.toISOString(),
+      mode,
     },
   };
 }

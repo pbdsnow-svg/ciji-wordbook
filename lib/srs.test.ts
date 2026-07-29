@@ -42,6 +42,7 @@ describe("learning statistics", () => {
       wordId: "word",
       rating: "know" as const,
       reviewedAt: new Date(2026, 6, 29 - offset, 12).toISOString(),
+      mode: "recognition" as const,
     }));
     expect(getStreak(logs, new Date(2026, 6, 29, 18))).toBe(3);
   });
