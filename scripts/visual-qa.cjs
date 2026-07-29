@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const outputDirectory = path.resolve(__dirname, "..", "qa");
+const baseUrl = process.env.QA_BASE_URL || "http://127.0.0.1:3000";
 
 async function capture() {
   const browser = await chromium.launch({ headless: true });
@@ -22,7 +23,7 @@ async function capture() {
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 
-  await page.goto("http://127.0.0.1:3000", { waitUntil: "networkidle" });
+  await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.locator(".word-card").waitFor();
   await page.screenshot({
     path: path.join(outputDirectory, "iphone-today.png"),
@@ -78,10 +79,10 @@ async function capture() {
   );
 
   const manifestResponse = await page.request.get(
-    "http://127.0.0.1:3000/manifest.webmanifest",
+    `${baseUrl}/manifest.webmanifest`,
   );
   const serviceWorkerResponse = await page.request.get(
-    "http://127.0.0.1:3000/sw.js",
+    `${baseUrl}/sw.js`,
   );
 
   await page.getByRole("button", { name: "取消" }).click();
@@ -101,7 +102,7 @@ async function capture() {
     colorScheme: "dark",
   });
   const darkPage = await darkContext.newPage();
-  await darkPage.goto("http://127.0.0.1:3000", {
+  await darkPage.goto(baseUrl, {
     waitUntil: "networkidle",
   });
   await darkPage.locator(".word-card").waitFor();
