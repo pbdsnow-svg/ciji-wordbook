@@ -1,5 +1,10 @@
-const CACHE_NAME = "ciji-shell-v1";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/icons/ciji-icon.svg"];
+const CACHE_NAME = "ciji-shell-v2";
+const APP_ROOT = new URL("./", self.location.href).pathname;
+const APP_SHELL = [
+  APP_ROOT,
+  new URL("manifest.webmanifest", self.location.href).pathname,
+  new URL("icons/ciji-icon.svg", self.location.href).pathname,
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -37,10 +42,10 @@ self.addEventListener("fetch", (event) => {
       fetch(request)
         .then((response) => {
           const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/", copy));
+          caches.open(CACHE_NAME).then((cache) => cache.put(APP_ROOT, copy));
           return response;
         })
-        .catch(() => caches.match("/")),
+        .catch(() => caches.match(APP_ROOT)),
     );
     return;
   }

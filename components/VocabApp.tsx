@@ -22,6 +22,8 @@ import type {
   VocabularyWord,
 } from "@/lib/types";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 type Tab = "today" | "library" | "progress";
 type IconName =
   | "today"
@@ -196,7 +198,9 @@ export function VocabApp() {
     setIsIOS(/iphone|ipad|ipod/i.test(window.navigator.userAgent));
 
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+      navigator.serviceWorker
+        .register(`${BASE_PATH}/sw.js`, { scope: `${BASE_PATH}/` })
+        .catch(() => undefined);
     }
     navigator.storage?.persist?.().catch(() => undefined);
   }, []);
