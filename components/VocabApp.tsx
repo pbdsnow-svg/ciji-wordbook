@@ -8,6 +8,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { DailyReader } from "@/components/DailyReader";
 import {
   CEFR_LEVELS,
   LEVEL_COPY,
@@ -38,6 +39,7 @@ const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 type Tab = "today" | "library" | "plan" | "context";
 type LearningPhase = "recognition" | "spelling";
+type ReadingSection = "daily" | "review";
 type IconName =
   | "today"
   | "library"
@@ -214,6 +216,7 @@ export function VocabApp() {
   const [contextIndex, setContextIndex] = useState(0);
   const [contextAnswer, setContextAnswer] = useState("");
   const [contextResult, setContextResult] = useState<boolean | null>(null);
+  const [readingSection, setReadingSection] = useState<ReadingSection>("daily");
   const cardHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -542,7 +545,7 @@ export function VocabApp() {
               </span>
               <i aria-hidden="true" />
               <button onClick={() => setTab("context")} type="button">
-                3 语境
+                3 阅读
               </button>
             </div>
 
@@ -991,14 +994,39 @@ export function VocabApp() {
 
         {tab === "context" && (
           <section className="screen context-screen" aria-labelledby="context-title">
-            <header className="screen-header">
+            <header className="screen-header reading-screen-header">
               <div>
-                <p className="eyebrow">把记过的词放回真实表达</p>
-                <h1 id="context-title">语境复习</h1>
+                <p className="eyebrow">每天读一点真实英文</p>
+                <h1 id="context-title">英文阅读</h1>
               </div>
             </header>
 
-            {contextWord ? (
+            <div
+              className="reader-section-picker"
+              role="group"
+              aria-label="阅读内容"
+            >
+              <button
+                aria-pressed={readingSection === "daily"}
+                className={readingSection === "daily" ? "is-selected" : ""}
+                onClick={() => setReadingSection("daily")}
+                type="button"
+              >
+                每日推荐
+              </button>
+              <button
+                aria-pressed={readingSection === "review"}
+                className={readingSection === "review" ? "is-selected" : ""}
+                onClick={() => setReadingSection("review")}
+                type="button"
+              >
+                复习练习
+              </button>
+            </div>
+
+            {readingSection === "daily" ? (
+              <DailyReader state={state} onStateChange={updateState} />
+            ) : contextWord ? (
               <>
                 <section className="context-card" aria-labelledby="cloze-title">
                   <div className="context-card-topline">
@@ -1097,7 +1125,7 @@ export function VocabApp() {
             ["today", "today", "今日"],
             ["library", "library", "词库"],
             ["plan", "plan", "计划"],
-            ["context", "context", "语境"],
+            ["context", "context", "阅读"],
           ] as Array<[Tab, IconName, string]>
         ).map(([value, icon, label]) => (
           <button

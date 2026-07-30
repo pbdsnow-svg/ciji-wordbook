@@ -18,3 +18,16 @@ The generated file is intended for this personal learning application. Source
 datasets are not committed because they are large; rerun
 `scripts/build-word-bank.py` with the three downloaded datasets to regenerate
 the bank deterministically.
+
+The Daily Reading module additionally uses:
+
+- **The New York Times World RSS** at runtime for a headline, short feed
+  description, publication date, and source link. Full articles are not copied
+  into the application.
+- **Wikinews** shortened offline fallbacks with source links. Wikinews text
+  published after December 16, 2024 is available under CC BY 4.0.
+- Public-domain English novels as the basis for original graded adaptations.
+  Each reading links to the corresponding work page.
+
+`public/data/reader-lexicon.json` is a compact 25,000-entry derivative lookup
+index built from ECDICT by `scripts/build-reader-lexicon.py`.

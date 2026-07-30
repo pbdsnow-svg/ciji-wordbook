@@ -1581,3 +1581,302 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+/* Daily reading */
+
+.reading-screen-header {
+  margin-bottom: 16px;
+}
+
+.reader-section-picker,
+.reading-kind-picker {
+  background: var(--paper-deep);
+  border-radius: var(--radius-control);
+  display: grid;
+  gap: 3px;
+  grid-template-columns: 1fr 1fr;
+  padding: 3px;
+}
+
+.reader-section-picker {
+  margin-bottom: 18px;
+}
+
+.reading-kind-picker {
+  margin-bottom: 14px;
+}
+
+.reader-section-picker button,
+.reading-kind-picker button {
+  background: transparent;
+  border: 0;
+  border-radius: 10px;
+  color: var(--pencil);
+  font-size: 14px;
+  font-weight: 650;
+  min-height: 44px;
+}
+
+.reader-section-picker button.is-selected,
+.reading-kind-picker button.is-selected {
+  background: var(--card-stock);
+  box-shadow: var(--small-shadow);
+  color: var(--ink);
+}
+
+.daily-reading-card {
+  background: var(--card-stock);
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+  margin-bottom: 18px;
+  padding: 20px;
+}
+
+.reading-meta {
+  color: var(--pencil);
+  display: flex;
+  font-size: 12px;
+  font-weight: 650;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.reading-title {
+  color: var(--ink);
+  font-family: ui-serif, Georgia, "Songti SC", serif;
+  font-size: clamp(26px, 7vw, 34px);
+  font-weight: 620;
+  letter-spacing: -0.03em;
+  line-height: 1.27;
+}
+
+.reading-title .reading-word {
+  font-weight: 620;
+}
+
+.tap-hint {
+  color: var(--blue-ink);
+  font-size: 12px;
+  margin: 10px 0 12px;
+}
+
+.reading-body {
+  border-bottom: 1px solid var(--rule);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-family: ui-serif, Georgia, "Songti SC", serif;
+  font-size: 18px;
+  line-height: 44px;
+  padding: 15px 0;
+}
+
+.reading-word {
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: inherit;
+  display: inline-block;
+  font: inherit;
+  line-height: 42px;
+  margin: 0;
+  min-height: 44px;
+  padding: 0 1px;
+  position: relative;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--blue-ink) 30%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+}
+
+.reading-word::after {
+  content: "";
+  height: 44px;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: max(100%, 44px);
+}
+
+.reading-word:active {
+  background: var(--blue-wash);
+  color: var(--blue-ink);
+}
+
+.reading-source {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding-top: 16px;
+}
+
+.reading-source div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.reading-source strong {
+  font-size: 13px;
+}
+
+.reading-source small {
+  color: var(--pencil);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.reading-source a {
+  align-items: center;
+  background: var(--blue-wash);
+  border-radius: 999px;
+  color: var(--blue-ink);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 650;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 15px;
+  text-decoration: none;
+}
+
+.reading-tip {
+  border-left: 2px solid var(--blue-ink);
+  margin: 4px 4px 24px;
+  padding-left: 13px;
+}
+
+.reading-tip strong {
+  font-size: 14px;
+}
+
+.reading-tip p {
+  color: var(--pencil);
+  font-size: 13px;
+  margin: 3px 0 0;
+}
+
+.definition-sheet {
+  min-height: 330px;
+}
+
+.definition-loading,
+.definition-missing {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 220px;
+  text-align: center;
+}
+
+.definition-loading span {
+  animation: definition-pulse 900ms ease-in-out infinite alternate;
+  background: var(--blue-wash);
+  border-radius: 50%;
+  height: 44px;
+  width: 44px;
+}
+
+.definition-loading p,
+.definition-missing p {
+  color: var(--pencil);
+  font-size: 14px;
+}
+
+.definition-missing h3 {
+  font-size: 28px;
+  margin: 0 0 6px;
+}
+
+.definition-content {
+  padding-top: 12px;
+}
+
+.definition-heading {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.definition-heading h3 {
+  font-size: 34px;
+  letter-spacing: -0.035em;
+  margin: 0;
+}
+
+.definition-heading p {
+  color: var(--correction-coral);
+  margin: 2px 0 0;
+}
+
+.definition-sound {
+  background: var(--blue-wash);
+  border: 0;
+  border-radius: 999px;
+  color: var(--blue-ink);
+  font-size: 13px;
+  font-weight: 650;
+  min-height: 44px;
+  padding: 0 16px;
+}
+
+.word-form-note {
+  color: var(--pencil);
+  font-size: 12px;
+  margin: 12px 0 0;
+}
+
+.definition-meaning {
+  border-bottom: 1px solid var(--rule);
+  border-top: 1px solid var(--rule);
+  margin: 18px 0;
+  padding: 15px 0;
+}
+
+.definition-meaning span {
+  color: var(--pencil);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.definition-meaning p {
+  font-size: 20px;
+  font-weight: 650;
+  margin: 4px 0 0;
+}
+
+.definition-example {
+  border-left: 2px solid var(--blue-ink);
+  color: var(--ink-soft);
+  font-family: ui-serif, Georgia, "Songti SC", serif;
+  line-height: 1.6;
+  margin: 0 0 18px;
+  padding-left: 13px;
+}
+
+.saved-word-button {
+  background: var(--memory-wash);
+  border: 0;
+  border-radius: 999px;
+  color: var(--memory-green);
+  font-weight: 650;
+  min-height: 50px;
+  width: 100%;
+}
+
+.definition-source-note {
+  color: var(--pencil);
+  font-size: 11px;
+  margin: 10px 0 0;
+  text-align: center;
+}
+
+@keyframes definition-pulse {
+  to {
+    opacity: 0.45;
+    transform: scale(0.88);
+  }
+}

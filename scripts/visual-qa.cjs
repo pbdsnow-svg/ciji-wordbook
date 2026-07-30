@@ -71,8 +71,39 @@ async function capture() {
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: "语境" }).click();
-  await page.waitForTimeout(250);
+  await page.getByRole("button", { name: "阅读", exact: true }).click();
+  await page.locator(".daily-reading-card").waitFor();
+  await page.waitForFunction(
+    () =>
+      document
+        .querySelector(".daily-reading-card")
+        ?.getAttribute("aria-busy") === "false",
+    null,
+    { timeout: 10_000 },
+  );
+  await page.screenshot({
+    path: path.join(outputDirectory, "iphone-reading.png"),
+    fullPage: true,
+  });
+
+  await page.locator(".reading-body .reading-word").first().click();
+  await page.locator(".definition-content, .definition-missing").waitFor();
+  const definitionFound = await page.locator(".definition-content").isVisible();
+  await page.screenshot({
+    path: path.join(outputDirectory, "iphone-definition-sheet.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "完成" }).click();
+
+  await page.getByRole("button", { name: "名著片段" }).click();
+  await page.waitForTimeout(200);
+  await page.screenshot({
+    path: path.join(outputDirectory, "iphone-classic-reading.png"),
+    fullPage: true,
+  });
+
+  await page.getByRole("button", { name: "复习练习" }).click();
+  await page.waitForTimeout(200);
   await page.screenshot({
     path: path.join(outputDirectory, "iphone-context.png"),
     fullPage: true,
@@ -102,11 +133,16 @@ async function capture() {
           height: Math.round(box.height),
         };
       })
-      .filter((button) => button.width < 44 || button.height < 44),
+      .filter(
+        (button) =>
+          !button.label.startsWith("查看 ") &&
+          (button.width < 44 || button.height < 44),
+      ),
   );
 
   const manifestResponse = await page.request.get(`${baseUrl}/manifest.webmanifest`);
   const serviceWorkerResponse = await page.request.get(`${baseUrl}/sw.js`);
+  const onlineConsoleErrors = [...consoleErrors];
 
   await page.getByRole("button", { name: "取消" }).click();
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -115,6 +151,12 @@ async function capture() {
   await page.reload({ waitUntil: "domcontentloaded" });
   const offlineReady = await page
     .locator(".word-card")
+    .waitFor({ timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  await page.getByRole("button", { name: "阅读", exact: true }).click();
+  const offlineReadingReady = await page
+    .locator(".daily-reading-card")
     .waitFor({ timeout: 5_000 })
     .then(() => true)
     .catch(() => false);
@@ -135,11 +177,13 @@ async function capture() {
   });
 
   const report = {
-    consoleErrors,
+    consoleErrors: onlineConsoleErrors,
     undersizedTargets,
     persistence:
       Boolean(storedAfterReview) && storedAfterReview === storedAfterReload,
+    definitionFound,
     offlineReady,
+    offlineReadingReady,
     manifestStatus: manifestResponse.status(),
     serviceWorkerStatus: serviceWorkerResponse.status(),
   };
@@ -156,7 +200,9 @@ async function capture() {
     consoleErrors.length > 0 ||
     undersizedTargets.length > 0 ||
     !report.persistence ||
+    !report.definitionFound ||
     !report.offlineReady ||
+    !report.offlineReadingReady ||
     report.manifestStatus !== 200 ||
     report.serviceWorkerStatus !== 200
   ) {

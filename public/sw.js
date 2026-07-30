@@ -1,9 +1,10 @@
-const CACHE_NAME = "ciji-shell-v2";
+const CACHE_NAME = "ciji-shell-v3";
 const APP_ROOT = new URL("./", self.location.href).pathname;
 const APP_SHELL = [
   APP_ROOT,
   new URL("manifest.webmanifest", self.location.href).pathname,
   new URL("icons/ciji-icon.svg", self.location.href).pathname,
+  new URL("data/reader-lexicon.json", self.location.href).pathname,
 ];
 
 self.addEventListener("install", (event) => {
