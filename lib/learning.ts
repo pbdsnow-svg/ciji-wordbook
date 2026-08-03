@@ -29,6 +29,14 @@ function startOfLocalDay(date: Date): Date {
   return result;
 }
 
+export function getLocalDayKey(date = new Date()): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
 export function normalizeSpelling(value: string): string {
   return value
     .trim()
@@ -165,6 +173,38 @@ export function ensureDailyWords(
   return { ...state, words: [...additions, ...state.words] };
 }
 
+export function getDailyLearningProgress(
+  state: VocabularyState,
+  now = new Date(),
+): { target: number; introduced: number; completed: number } {
+  const target =
+    state.settings.activePlan?.dailyNewWords ?? state.settings.dailyGoal;
+  const targetWordIds = new Set(
+    state.words
+      .filter(
+        (word) =>
+          (word.source === "cefr" || word.source === "seed") &&
+          isSameLocalDay(new Date(word.introducedAt), now),
+      )
+      .map((word) => word.id),
+  );
+  const completedWordIds = new Set(
+    state.logs
+      .filter(
+        (log) =>
+          log.mode === "spelling" &&
+          targetWordIds.has(log.wordId) &&
+          isSameLocalDay(new Date(log.reviewedAt), now),
+      )
+      .map((log) => log.wordId),
+  );
+  return {
+    target,
+    introduced: targetWordIds.size,
+    completed: completedWordIds.size,
+  };
+}
+
 export function createCloze(example: string, term: string): string {
   const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const matcher = new RegExp(`\\b${escaped}\\b`, "gi");
@@ -184,4 +224,43 @@ export function selectContextWords(
       return new Date(b.introducedAt).getTime() - new Date(a.introducedAt).getTime();
     })
     .slice(0, count);
+}
+
+function stableChoiceScore(value: string): number {
+  return [...value].reduce(
+    (score, character) => (score * 31 + character.charCodeAt(0)) >>> 0,
+    7,
+  );
+}
+
+export function buildChoiceOptions(
+  target: VocabularyWord,
+  pool: VocabularyWord[],
+  count = 4,
+): VocabularyWord[] {
+  const seenTerms = new Set([normalizeSpelling(target.term)]);
+  const distractors = [...pool]
+    .filter((word) => word.id !== target.id)
+    .sort((a, b) => {
+      const sameLevelA = a.level === target.level ? 0 : 1;
+      const sameLevelB = b.level === target.level ? 0 : 1;
+      return (
+        sameLevelA - sameLevelB ||
+        stableChoiceScore(`${target.id}:${a.id}`) -
+          stableChoiceScore(`${target.id}:${b.id}`)
+      );
+    })
+    .filter((word) => {
+      const normalized = normalizeSpelling(word.term);
+      if (seenTerms.has(normalized)) return false;
+      seenTerms.add(normalized);
+      return true;
+    })
+    .slice(0, Math.max(0, count - 1));
+
+  return [target, ...distractors].sort(
+    (a, b) =>
+      stableChoiceScore(`${target.id}:position:${a.id}`) -
+      stableChoiceScore(`${target.id}:position:${b.id}`),
+  );
 }

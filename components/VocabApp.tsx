@@ -9,20 +9,20 @@ import {
   type ReactNode,
 } from "react";
 import { DailyReader } from "@/components/DailyReader";
+import { ReviewPractice } from "@/components/ReviewPractice";
 import {
   CEFR_LEVELS,
   LEVEL_COPY,
-  createCloze,
   createStudyPlan,
   ensureDailyWords,
   getAvailableWordCount,
+  getDailyLearningProgress,
+  getLocalDayKey,
   getPlanMetrics,
   isSpellingCorrect,
-  selectContextWords,
 } from "@/lib/learning";
 import {
   getDueWords,
-  getLogsForDay,
   getReviewCountsForLastSevenDays,
   getStreak,
   reviewWord,
@@ -213,14 +213,14 @@ export function VocabApp() {
   const [showInstallSheet, setShowInstallSheet] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [contextIndex, setContextIndex] = useState(0);
-  const [contextAnswer, setContextAnswer] = useState("");
-  const [contextResult, setContextResult] = useState<boolean | null>(null);
   const [readingSection, setReadingSection] = useState<ReadingSection>("daily");
   const cardHeadingRef = useRef<HTMLHeadingElement>(null);
+  const stateRef = useRef<VocabularyState | null>(null);
+  const localDayKeyRef = useRef(getLocalDayKey());
 
   useEffect(() => {
     const initial = ensureDailyWords(loadState());
+    stateRef.current = initial;
     setState(initial);
     saveState(initial);
     setQueue(getDueWords(initial).map((word) => word.id));
@@ -243,6 +243,35 @@ export function VocabApp() {
   }, []);
 
   useEffect(() => {
+    function refreshForCurrentDay() {
+      const now = new Date();
+      const dayKey = getLocalDayKey(now);
+      if (dayKey === localDayKeyRef.current) return;
+      localDayKeyRef.current = dayKey;
+      const current = stateRef.current;
+      if (!current) return;
+      const next = ensureDailyWords(current, now);
+      stateRef.current = next;
+      setState(next);
+      saveState(next);
+      setQueue(getDueWords(next, now).map((word) => word.id));
+      resetCard();
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshForCurrentDay();
+    };
+    window.addEventListener("focus", refreshForCurrentDay);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    const interval = window.setInterval(refreshForCurrentDay, 60_000);
+    return () => {
+      window.removeEventListener("focus", refreshForCurrentDay);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
     if (state) saveState(state);
   }, [state]);
 
@@ -251,11 +280,11 @@ export function VocabApp() {
     [state?.words],
   );
   const currentWord = queue.length ? wordsById.get(queue[0]) : undefined;
-  const todayCompleted = state
-    ? getLogsForDay(state.logs).filter((log) => log.mode === "spelling").length
-    : 0;
-  const todayGoal =
-    state?.settings.activePlan?.dailyNewWords ?? state?.settings.dailyGoal ?? 8;
+  const dailyProgress = state
+    ? getDailyLearningProgress(state)
+    : { target: 8, introduced: 0, completed: 0 };
+  const todayCompleted = dailyProgress.completed;
+  const todayGoal = dailyProgress.target;
   const todayPercent = Math.min(
     100,
     Math.round((todayCompleted / Math.max(todayGoal, 1)) * 100),
@@ -274,13 +303,8 @@ export function VocabApp() {
     );
   }, [search, state]);
 
-  const contextWords = useMemo(
-    () => (state ? selectContextWords(state, 4) : []),
-    [state],
-  );
-  const contextWord = contextWords[contextIndex % Math.max(contextWords.length, 1)];
-
   function updateState(nextState: VocabularyState) {
+    stateRef.current = nextState;
     setState(nextState);
     saveState(nextState);
   }
@@ -465,38 +489,6 @@ export function VocabApp() {
       ...state,
       settings: { ...state.settings, activePlan: null },
     });
-  }
-
-  function submitContext(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!state || !contextWord || contextResult !== null) return;
-    const correct = isSpellingCorrect(contextAnswer, contextWord.term);
-    const now = new Date();
-    updateState({
-      ...state,
-      words: state.words.map((word) =>
-        word.id === contextWord.id
-          ? { ...word, contextReviewCount: word.contextReviewCount + 1 }
-          : word,
-      ),
-      logs: [
-        ...state.logs,
-        {
-          id: `${contextWord.id}-${now.getTime()}-context`,
-          wordId: contextWord.id,
-          rating: correct ? "know" : "fuzzy",
-          reviewedAt: now.toISOString(),
-          mode: "context",
-        },
-      ],
-    });
-    setContextResult(correct);
-  }
-
-  function nextContext() {
-    setContextIndex((index) => (index + 1) % Math.max(contextWords.length, 1));
-    setContextAnswer("");
-    setContextResult(null);
   }
 
   if (!state) {
@@ -1026,93 +1018,11 @@ export function VocabApp() {
 
             {readingSection === "daily" ? (
               <DailyReader state={state} onStateChange={updateState} />
-            ) : contextWord ? (
-              <>
-                <section className="context-card" aria-labelledby="cloze-title">
-                  <div className="context-card-topline">
-                    <span>句子填空</span>
-                    <span>
-                      {contextIndex + 1} / {contextWords.length}
-                    </span>
-                  </div>
-                  <h2 id="cloze-title">
-                    {createCloze(contextWord.example, contextWord.term)}
-                  </h2>
-                  <p>{contextWord.exampleTranslation}</p>
-                  <form className="context-form" onSubmit={submitContext}>
-                    <input
-                      autoCapitalize="none"
-                      autoComplete="off"
-                      autoCorrect="off"
-                      disabled={contextResult !== null}
-                      onChange={(event) => setContextAnswer(event.target.value)}
-                      placeholder="填入缺失的单词"
-                      spellCheck={false}
-                      value={contextAnswer}
-                    />
-                    {contextResult === null ? (
-                      <button
-                        className="primary-button"
-                        disabled={!contextAnswer.trim()}
-                        type="submit"
-                      >
-                        检查答案
-                      </button>
-                    ) : (
-                      <div
-                        className={`context-feedback ${
-                          contextResult ? "is-correct" : "is-wrong"
-                        }`}
-                      >
-                        <strong>
-                          {contextResult
-                            ? "正确，放回句子里了"
-                            : `答案是 ${contextWord.term}`}
-                        </strong>
-                        <button onClick={nextContext} type="button">
-                          下一句
-                        </button>
-                      </div>
-                    )}
-                  </form>
-                </section>
-
-                <section className="paragraph-card" aria-labelledby="paragraph-title">
-                  <div className="section-heading">
-                    <h2 id="paragraph-title">今日复习段落</h2>
-                    <span>{contextWords.length} 个已学词</span>
-                  </div>
-                  <div className="paragraph-copy">
-                    {contextWords.map((word) => (
-                      <p key={word.id}>{word.example}</p>
-                    ))}
-                  </div>
-                  <div className="context-word-chips" aria-label="段落重点词">
-                    {contextWords.map((word) => (
-                      <button key={word.id} onClick={() => speak(word)} type="button">
-                        {word.term}
-                        <small>{word.meaning}</small>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="paragraph-hint">
-                    先通读，再点重点词听发音。句子来自离线中英例句库。
-                  </p>
-                </section>
-              </>
             ) : (
-              <EmptyState
-                action={
-                  <button
-                    className="secondary-button"
-                    onClick={() => setTab("today")}
-                    type="button"
-                  >
-                    先完成今日单词
-                  </button>
-                }
-                description="至少完成一个单词的认识与拼写后，这里会自动生成句子填空和复习段落。"
-                title="语境正在等单词"
+              <ReviewPractice
+                onGoToday={() => setTab("today")}
+                onStateChange={updateState}
+                state={state}
               />
             )}
           </section>

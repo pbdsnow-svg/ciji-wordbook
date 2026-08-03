@@ -1,4 +1,4 @@
-const CACHE_NAME = "ciji-shell-v3";
+const CACHE_NAME = "ciji-shell-v4";
 const APP_ROOT = new URL("./", self.location.href).pathname;
 const APP_SHELL = [
   APP_ROOT,

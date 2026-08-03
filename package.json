@@ -9,6 +9,7 @@
     "build": "vinext build && node scripts/copy-hosting-config.cjs",
     "start": "vinext start",
     "test": "vitest run",
+    "test:rollover": "node scripts/daily-rollover-qa.cjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

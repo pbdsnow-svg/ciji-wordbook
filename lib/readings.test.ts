@@ -11,6 +11,8 @@ describe("daily reading helpers", () => {
     const morning = new Date(2026, 6, 30, 8);
     const evening = new Date(2026, 6, 30, 22);
     expect(getDailyClassic(morning).id).toBe(getDailyClassic(evening).id);
+    expect(getDailyClassic(morning).titleTranslation.length).toBeGreaterThan(0);
+    expect(getDailyClassic(morning).translation.length).toBeGreaterThan(20);
   });
 
   it("separates tappable words from punctuation", () => {

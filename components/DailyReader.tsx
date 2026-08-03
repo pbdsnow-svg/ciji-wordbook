@@ -71,6 +71,9 @@ export function DailyReader({
   onStateChange: (state: VocabularyState) => void;
 }) {
   const [kind, setKind] = useState<ReadingKind>("news");
+  const [languageMode, setLanguageMode] = useState<"english" | "bilingual">(
+    "bilingual",
+  );
   const [news, setNews] = useState<DailyReading>(() => getOfflineNews());
   const [newsLoading, setNewsLoading] = useState(true);
   const [selectedWord, setSelectedWord] = useState<SelectedWord | null>(null);
@@ -170,6 +173,25 @@ export function DailyReader({
         </button>
       </div>
 
+      <div className="reading-language-picker" role="group" aria-label="对照语言">
+        <button
+          aria-pressed={languageMode === "english"}
+          className={languageMode === "english" ? "is-selected" : ""}
+          onClick={() => setLanguageMode("english")}
+          type="button"
+        >
+          英文原文
+        </button>
+        <button
+          aria-pressed={languageMode === "bilingual"}
+          className={languageMode === "bilingual" ? "is-selected" : ""}
+          onClick={() => setLanguageMode("bilingual")}
+          type="button"
+        >
+          中英对照
+        </button>
+      </div>
+
       <article className="daily-reading-card" aria-busy={newsLoading && kind === "news"}>
         <div className="reading-meta">
           <span>{reading.level}</span>
@@ -184,12 +206,21 @@ export function DailyReader({
           onWord={openWord}
           text={reading.title}
         />
+        {languageMode === "bilingual" && (
+          <p className="reading-title-translation">{reading.titleTranslation}</p>
+        )}
         <p className="tap-hint">轻点任意英文单词查看释义</p>
         <TappableText
           className="reading-body"
           onWord={openWord}
           text={reading.content}
         />
+        {languageMode === "bilingual" && (
+          <section className="reading-translation" aria-label="中文对照">
+            <span>中文对照</span>
+            <p>{reading.translation}</p>
+          </section>
+        )}
         <footer className="reading-source">
           <div>
             <strong>{reading.sourceName}</strong>

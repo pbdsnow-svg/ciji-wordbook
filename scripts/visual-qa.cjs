@@ -81,6 +81,12 @@ async function capture() {
     null,
     { timeout: 10_000 },
   );
+  const bilingualReady =
+    (await page.locator(".reading-title-translation").isVisible()) &&
+    (await page.locator(".reading-translation").isVisible());
+  await page.getByRole("button", { name: "英文原文" }).click();
+  const englishOnlyReady = !(await page.locator(".reading-translation").isVisible());
+  await page.getByRole("button", { name: "中英对照" }).click();
   await page.screenshot({
     path: path.join(outputDirectory, "iphone-reading.png"),
     fullPage: true,
@@ -104,6 +110,11 @@ async function capture() {
 
   await page.getByRole("button", { name: "复习练习" }).click();
   await page.waitForTimeout(200);
+  const choiceReviewReady = (await page.locator(".choice-grid button").count()) >= 2;
+  if (choiceReviewReady) {
+    await page.locator(".choice-grid button").first().click();
+    await page.locator(".context-feedback").waitFor();
+  }
   await page.screenshot({
     path: path.join(outputDirectory, "iphone-context.png"),
     fullPage: true,
@@ -182,6 +193,9 @@ async function capture() {
     persistence:
       Boolean(storedAfterReview) && storedAfterReview === storedAfterReload,
     definitionFound,
+    bilingualReady,
+    englishOnlyReady,
+    choiceReviewReady,
     offlineReady,
     offlineReadingReady,
     manifestStatus: manifestResponse.status(),
@@ -201,6 +215,9 @@ async function capture() {
     undersizedTargets.length > 0 ||
     !report.persistence ||
     !report.definitionFound ||
+    !report.bilingualReady ||
+    !report.englishOnlyReady ||
+    !report.choiceReviewReady ||
     !report.offlineReady ||
     !report.offlineReadingReady ||
     report.manifestStatus !== 200 ||
