@@ -1,23 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  buildChoiceOptions,
-  createCloze,
-  selectContextWords,
-} from "@/lib/learning";
+  DIALOGUE_MAX_ATTEMPTS,
+  DIALOGUE_WORD_LIMIT,
+  advanceDialogueQueue,
+  buildDialogueChoices,
+  buildDialogueLines,
+  getTodayLearnedWordCount,
+  getTodayLearnedWords,
+  type DialogueLine,
+} from "@/lib/dialogue";
+import { reviewWord } from "@/lib/srs";
 import type { VocabularyState, VocabularyWord } from "@/lib/types";
 
-interface PracticeQuestion {
-  target: VocabularyWord;
-  options: VocabularyWord[];
+interface DialogueSession {
+  lines: DialogueLine[];
+  offset: number;
+  totalCount: number;
+  words: VocabularyWord[];
 }
 
-function createSession(state: VocabularyState): PracticeQuestion[] {
-  return selectContextWords(state, 5).map((target) => ({
-    target,
-    options: buildChoiceOptions(target, state.words, 4),
-  }));
+function createSession(
+  state: VocabularyState,
+  day: Date,
+  offset = 0,
+): DialogueSession {
+  const words = getTodayLearnedWords(
+    state,
+    day,
+    offset,
+    DIALOGUE_WORD_LIMIT,
+  );
+  return {
+    lines: buildDialogueLines(words),
+    offset,
+    totalCount: getTodayLearnedWordCount(state, day),
+    words,
+  };
 }
 
 function speak(word: VocabularyWord) {
@@ -38,18 +58,61 @@ export function ReviewPractice({
   onStateChange: (state: VocabularyState) => void;
   onGoToday: () => void;
 }) {
-  const [session, setSession] = useState(() => createSession(state));
-  const [questionIndex, setQuestionIndex] = useState(0);
+  const sessionDayRef = useRef(new Date());
+  const transcriptRef = useRef<HTMLDivElement>(null);
+  const activeTurnRef = useRef<HTMLDivElement>(null);
+  const [session, setSession] = useState(() =>
+    createSession(state, sessionDayRef.current),
+  );
+  const [queue, setQueue] = useState(() =>
+    session.lines.map((line) => line.word.id),
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [score, setScore] = useState(0);
+  const [answerCorrect, setAnswerCorrect] = useState<boolean | null>(null);
+  const [answeredAttempt, setAnsweredAttempt] = useState(0);
+  const [attemptCounts, setAttemptCounts] = useState<Record<string, number>>({});
+  const [resolvedIds, setResolvedIds] = useState<Set<string>>(() => new Set());
+  const [needsMoreIds, setNeedsMoreIds] = useState<Set<string>>(() => new Set());
+  const [firstTryCorrect, setFirstTryCorrect] = useState(0);
   const [showHint, setShowHint] = useState(false);
+  const [showTranslations, setShowTranslations] = useState(false);
   const [finished, setFinished] = useState(false);
 
-  if (session.length === 0) {
+  const currentId = queue[0];
+  const currentLine = session.lines.find((line) => line.word.id === currentId);
+  const currentWord = currentLine
+    ? state.words.find((word) => word.id === currentLine.word.id) ??
+      currentLine.word
+    : undefined;
+  const choices = useMemo(
+    () =>
+      currentWord ? buildDialogueChoices(currentWord, state.words) : [],
+    [currentWord, state.words],
+  );
+  const answered = selectedId !== null;
+  const remainingForNextDialogue = Math.max(
+    session.totalCount - session.offset - session.words.length,
+    0,
+  );
+
+  useEffect(() => {
+    if (!currentId || !activeTurnRef.current) return;
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    activeTurnRef.current.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "center",
+    });
+  }, [currentId]);
+
+  if (session.lines.length === 0) {
     return (
-      <section className="empty-state">
-        <h2>语境正在等单词</h2>
-        <p>至少完成一个单词的认识与拼写后，这里会自动生成选词填空。</p>
+      <section className="empty-state dialogue-empty-state">
+        <h2>今天的对话还没有单词</h2>
+        <p>
+          在“今日学习”完成单词后，它们会自动进入同一段双人对话。学得越多，对话里连接的词就越多。
+        </p>
         <button className="secondary-button" onClick={onGoToday} type="button">
           先完成今日单词
         </button>
@@ -57,165 +120,317 @@ export function ReviewPractice({
     );
   }
 
-  const question = session[questionIndex];
-  const answered = selectedId !== null;
-  const isCorrect = selectedId === question.target.id;
-
   function chooseAnswer(wordId: string) {
-    if (answered) return;
-    const correct = wordId === question.target.id;
+    if (answered || !currentWord) return;
+    const correct = wordId === currentWord.id;
+    const attemptNumber = (attemptCounts[currentWord.id] ?? 0) + 1;
+    const rating = correct
+      ? attemptNumber === 1 && !showHint
+        ? "know"
+        : "fuzzy"
+      : "forgot";
     const now = new Date();
+    const result = reviewWord(currentWord, rating, now, "context");
+    const nextWord = {
+      ...result.word,
+      contextReviewCount: currentWord.contextReviewCount + 1,
+    };
+
     onStateChange({
       ...state,
       words: state.words.map((word) =>
-        word.id === question.target.id
-          ? { ...word, contextReviewCount: word.contextReviewCount + 1 }
-          : word,
+        word.id === currentWord.id ? nextWord : word,
       ),
-      logs: [
-        ...state.logs,
-        {
-          id: `${question.target.id}-${now.getTime()}-context`,
-          wordId: question.target.id,
-          rating: correct ? "know" : "fuzzy",
-          reviewedAt: now.toISOString(),
-          mode: "context",
-        },
-      ],
+      logs: [...state.logs, result.log],
     });
+    setAttemptCounts((counts) => ({
+      ...counts,
+      [currentWord.id]: attemptNumber,
+    }));
+    if (correct && attemptNumber === 1 && !showHint) {
+      setFirstTryCorrect((score) => score + 1);
+    }
+    setAnsweredAttempt(attemptNumber);
     setSelectedId(wordId);
-    if (correct) setScore((value) => value + 1);
+    setAnswerCorrect(correct);
   }
 
   function continuePractice() {
-    if (questionIndex + 1 >= session.length) {
-      setFinished(true);
-      return;
+    if (!currentId || answerCorrect === null) return;
+    const exhausted =
+      !answerCorrect && answeredAttempt >= DIALOGUE_MAX_ATTEMPTS;
+    if (answerCorrect || exhausted) {
+      setResolvedIds((ids) => new Set(ids).add(currentId));
     }
-    setQuestionIndex((value) => value + 1);
+    if (exhausted) {
+      setNeedsMoreIds((ids) => new Set(ids).add(currentId));
+    }
+
+    const nextQueue = advanceDialogueQueue(
+      queue,
+      answerCorrect,
+      answeredAttempt,
+    );
+    setQueue(nextQueue);
     setSelectedId(null);
+    setAnswerCorrect(null);
+    setAnsweredAttempt(0);
     setShowHint(false);
+    if (nextQueue.length === 0) setFinished(true);
   }
 
-  function restart() {
-    setSession(createSession(state));
-    setQuestionIndex(0);
+  function startGroup(offset: number) {
+    const nextSession = createSession(state, sessionDayRef.current, offset);
+    setSession(nextSession);
+    setQueue(nextSession.lines.map((line) => line.word.id));
     setSelectedId(null);
-    setScore(0);
+    setAnswerCorrect(null);
+    setAnsweredAttempt(0);
+    setAttemptCounts({});
+    setResolvedIds(new Set());
+    setNeedsMoreIds(new Set());
+    setFirstTryCorrect(0);
     setShowHint(false);
+    setShowTranslations(false);
     setFinished(false);
   }
 
   if (finished) {
     return (
       <>
-        <section className="practice-summary" aria-live="polite">
-          <span>本组完成</span>
+        <section className="practice-summary dialogue-summary" aria-live="polite">
+          <span>今日对话完成</span>
           <strong>
-            {score}<small> / {session.length}</small>
+            {firstTryCorrect}
+            <small> / {session.lines.length}</small>
           </strong>
           <p>
-            {score === session.length
-              ? "全部答对，这组词已经能放回语境了。"
-              : "错题已记为模糊，之后会优先再出现。"}
+            首次独立答对 {firstTryCorrect} 个；
+            {needsMoreIds.size > 0
+              ? `${needsMoreIds.size} 个词已标记为需要加强。`
+              : "所有错词都已在本轮重新答对。"}
           </p>
-          <button className="primary-button" onClick={restart} type="button">
-            再练一组
-          </button>
+          <div className="summary-actions">
+            <button
+              className="secondary-button"
+              onClick={() => startGroup(session.offset)}
+              type="button"
+            >
+              再练这段对话
+            </button>
+            {remainingForNextDialogue > 0 && (
+              <button
+                className="primary-button"
+                onClick={() =>
+                  startGroup(session.offset + session.words.length)
+                }
+                type="button"
+              >
+                继续剩余 {remainingForNextDialogue} 词
+              </button>
+            )}
+          </div>
         </section>
-        <ReviewParagraph words={session.map((item) => item.target)} />
+
+        <div className="dialogue-language-row">
+          <div>
+            <span>完整对话</span>
+            <small>{session.lines.length} 个今日单词</small>
+          </div>
+          <button
+            aria-pressed={showTranslations}
+            onClick={() => setShowTranslations((visible) => !visible)}
+            type="button"
+          >
+            {showTranslations ? "隐藏中文" : "显示中文"}
+          </button>
+        </div>
+        <DialogueTranscript
+          lines={session.lines}
+          revealAll
+          showTranslations={showTranslations}
+        />
       </>
     );
   }
 
   return (
-    <>
-      <section className="context-card choice-practice" aria-labelledby="cloze-title">
-        <div className="context-card-topline">
-          <span>选词填空 · 得分 {score}</span>
-          <span>
-            {questionIndex + 1} / {session.length}
-          </span>
+    <section className="dialogue-practice" aria-labelledby="dialogue-title">
+      <div className="dialogue-practice-heading">
+        <div>
+          <span>今日对话 · 最多 40 词</span>
+          <h2 id="dialogue-title">把今天的词连起来</h2>
         </div>
-        <h2 id="cloze-title">
-          {createCloze(question.target.example, question.target.term)}
-        </h2>
-        {!answered && !showHint && (
-          <button
-            className="text-hint-button"
-            onClick={() => setShowHint(true)}
-            type="button"
-          >
-            显示中文提示
-          </button>
-        )}
-        {(showHint || answered) && (
-          <p className="choice-translation">{question.target.exampleTranslation}</p>
-        )}
-        <div className="choice-grid" aria-label="选择缺失的单词">
-          {question.options.map((option) => {
-            const isAnswer = option.id === question.target.id;
-            const isSelected = option.id === selectedId;
-            const resultClass = answered
-              ? isAnswer
-                ? "is-answer"
-                : isSelected
-                  ? "is-wrong-choice"
-                  : ""
-              : "";
-            return (
-              <button
-                aria-pressed={isSelected}
-                className={resultClass}
-                disabled={answered}
-                key={option.id}
-                onClick={() => chooseAnswer(option.id)}
-                type="button"
-              >
-                <strong>{option.term}</strong>
-                <small>{option.meaning}</small>
+        <strong>
+          {resolvedIds.size}<small> / {session.lines.length}</small>
+        </strong>
+      </div>
+
+      <DialogueTranscript
+        activeRef={activeTurnRef}
+        currentId={currentId}
+        lines={session.lines}
+        revealCurrent={answered}
+        resolvedIds={resolvedIds}
+        showCurrentTranslation={showHint || answered}
+        transcriptRef={transcriptRef}
+      />
+
+      {currentLine && currentWord && (
+        <div className="dialogue-answer-dock">
+          <div className="dialogue-current-meta">
+            <span>
+              当前空格 · {session.lines.indexOf(currentLine) + 1} /{" "}
+              {session.lines.length}
+            </span>
+            {!answered && !showHint && (
+              <button onClick={() => setShowHint(true)} type="button">
+                显示本句中文
               </button>
-            );
-          })}
-        </div>
-        {answered && (
-          <div
-            className={`context-feedback ${isCorrect ? "is-correct" : "is-wrong"}`}
-            aria-live="polite"
-          >
-            <strong>{isCorrect ? "正确，句子完整了" : `答案是 ${question.target.term}`}</strong>
-            <button onClick={continuePractice} type="button">
-              {questionIndex + 1 === session.length ? "查看得分" : "下一题"}
-            </button>
+            )}
           </div>
-        )}
-      </section>
-      <ReviewParagraph words={session.map((item) => item.target)} />
-    </>
+
+          <div className="dialogue-choice-grid" aria-label="选择对话中缺少的单词">
+            {choices.map((option) => {
+              const isAnswer = option.id === currentWord.id;
+              const isSelected = option.id === selectedId;
+              const resultClass = answered
+                ? isAnswer
+                  ? "is-answer"
+                  : isSelected
+                    ? "is-wrong-choice"
+                    : ""
+                : "";
+              return (
+                <button
+                  aria-pressed={isSelected}
+                  className={resultClass}
+                  disabled={answered}
+                  key={option.id}
+                  onClick={() => chooseAnswer(option.id)}
+                  type="button"
+                >
+                  <strong>{option.term}</strong>
+                  {answered && <small>{option.phonetic}</small>}
+                </button>
+              );
+            })}
+          </div>
+
+          {answered && answerCorrect !== null && (
+            <div
+              className={`context-feedback ${
+                answerCorrect ? "is-correct" : "is-wrong"
+              }`}
+              aria-live="polite"
+            >
+              <div>
+                <strong>
+                  {answerCorrect
+                    ? answeredAttempt > 1
+                      ? "这次答对了"
+                      : "正确，句子接上了"
+                    : `答案是 ${currentWord.term}`}
+                </strong>
+                {!answerCorrect && answeredAttempt < DIALOGUE_MAX_ATTEMPTS && (
+                  <small>它会隔三句再次出现</small>
+                )}
+              </div>
+              <button onClick={continuePractice} type="button">
+                {queue.length === 1 && answerCorrect ? "查看完整对话" : "继续对话"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 
-function ReviewParagraph({ words }: { words: VocabularyWord[] }) {
+function DialogueTranscript({
+  lines,
+  currentId,
+  resolvedIds = new Set<string>(),
+  revealCurrent = false,
+  revealAll = false,
+  showCurrentTranslation = false,
+  showTranslations = false,
+  transcriptRef,
+  activeRef,
+}: {
+  lines: DialogueLine[];
+  currentId?: string;
+  resolvedIds?: Set<string>;
+  revealCurrent?: boolean;
+  revealAll?: boolean;
+  showCurrentTranslation?: boolean;
+  showTranslations?: boolean;
+  transcriptRef?: React.RefObject<HTMLDivElement | null>;
+  activeRef?: React.RefObject<HTMLDivElement | null>;
+}) {
   return (
-    <section className="paragraph-card" aria-labelledby="paragraph-title">
-      <div className="section-heading">
-        <h2 id="paragraph-title">本组复习段落</h2>
-        <span>{words.length} 个已学词</span>
+    <div className="dialogue-transcript" ref={transcriptRef}>
+      <div className="dialogue-turn dialogue-turn-intro">
+        <span aria-hidden="true">M</span>
+        <div>
+          <strong>Mia</strong>
+          <p>Let&apos;s connect the words we studied today in one conversation.</p>
+          {(revealAll && showTranslations) && (
+            <small>让我们把今天学过的单词放进同一段对话。</small>
+          )}
+        </div>
       </div>
-      <div className="paragraph-copy">
-        {words.map((word) => (
-          <p key={word.id}>{word.example}</p>
-        ))}
+      <div className="dialogue-turn dialogue-turn-intro is-leo">
+        <span aria-hidden="true">L</span>
+        <div>
+          <strong>Leo</strong>
+          <p>Good idea. Read each clue and complete the missing word.</p>
+          {(revealAll && showTranslations) && (
+            <small>好主意。读每个线索，补全缺少的单词。</small>
+          )}
+        </div>
       </div>
-      <div className="context-word-chips" aria-label="段落重点词">
-        {words.map((word) => (
-          <button key={word.id} onClick={() => speak(word)} type="button">
-            {word.term}
-            <small>{word.meaning}</small>
-          </button>
-        ))}
-      </div>
-      <p className="paragraph-hint">先通读，再点重点词听发音。句子来自离线中英例句库。</p>
-    </section>
+
+      {lines.map((line) => {
+        const isCurrent = line.word.id === currentId;
+        const isResolved = resolvedIds.has(line.word.id);
+        const revealWord = revealAll || isResolved || (isCurrent && revealCurrent);
+        const showTranslation =
+          showTranslations || (isCurrent && showCurrentTranslation);
+        return (
+          <div
+            aria-current={isCurrent ? "step" : undefined}
+            className={`dialogue-turn ${line.speaker === "Leo" ? "is-leo" : ""} ${
+              isCurrent ? "is-active" : ""
+            } ${isResolved ? "is-resolved" : ""}`}
+            data-word-id={line.word.id}
+            key={line.id}
+            ref={isCurrent ? activeRef : undefined}
+          >
+            <span aria-hidden="true">{line.speaker.charAt(0)}</span>
+            <div>
+              <strong>{line.speaker}</strong>
+              <small className="dialogue-lead">{line.lead}</small>
+              <p>{revealWord ? line.word.example : line.prompt}</p>
+              {showTranslation && (
+                <small className="dialogue-translation">
+                  {line.leadTranslation} {line.translation}
+                </small>
+              )}
+              {revealAll && (
+                <button
+                  className="dialogue-word-button"
+                  onClick={() => speak(line.word)}
+                  type="button"
+                >
+                  {line.word.term}
+                  <small>{line.word.meaning}</small>
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

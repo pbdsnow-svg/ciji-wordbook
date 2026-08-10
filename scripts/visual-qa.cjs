@@ -6,7 +6,13 @@ const outputDirectory = path.resolve(__dirname, "..", "qa");
 const baseUrl = process.env.QA_BASE_URL || "http://127.0.0.1:3000";
 
 async function capture() {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    args: ["--no-proxy-server"],
+    headless: true,
+    ...(process.env.QA_BROWSER_PATH
+      ? { executablePath: process.env.QA_BROWSER_PATH }
+      : {}),
+  });
   const context = await browser.newContext({
     viewport: { width: 430, height: 932 },
     deviceScaleFactor: 1,
@@ -23,7 +29,7 @@ async function capture() {
   });
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
   await page.locator(".word-card").waitFor();
   await page.screenshot({
     path: path.join(outputDirectory, "iphone-today.png"),
@@ -52,7 +58,7 @@ async function capture() {
   const storedAfterReview = await page.evaluate(() =>
     window.localStorage.getItem("ciji-vocabulary-state-v2"),
   );
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   const storedAfterReload = await page.evaluate(() =>
     window.localStorage.getItem("ciji-vocabulary-state-v2"),
   );
@@ -108,11 +114,51 @@ async function capture() {
     fullPage: true,
   });
 
+  await page.getByRole("button", { name: "今日" }).click();
+  await page.evaluate(() => {
+    const key = "ciji-vocabulary-state-v2";
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    state.settings.activePlan = null;
+    state.settings.dailyGoal = 40;
+    window.localStorage.setItem(key, JSON.stringify(state));
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator(".word-card").waitFor();
+  await page.evaluate(() => {
+    const key = "ciji-vocabulary-state-v2";
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    const now = new Date();
+    state.words.slice(0, 40).forEach((word, index) => {
+      word.reviewCount = Math.max(1, word.reviewCount);
+      word.introducedAt = now.toISOString();
+      state.logs.push({
+        id: `visual-dialogue-${word.id}`,
+        wordId: word.id,
+        rating: "know",
+        reviewedAt: new Date(now.getTime() + index).toISOString(),
+        mode: "spelling",
+      });
+    });
+    window.localStorage.setItem(key, JSON.stringify(state));
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator(".word-card").waitFor();
+  await page.getByRole("button", { name: "阅读", exact: true }).click();
+  await page.locator(".daily-reading-card").waitFor();
   await page.getByRole("button", { name: "复习练习" }).click();
-  await page.waitForTimeout(200);
-  const choiceReviewReady = (await page.locator(".choice-grid button").count()) >= 2;
-  if (choiceReviewReady) {
-    await page.locator(".choice-grid button").first().click();
+  await page.locator(".dialogue-transcript").waitFor();
+  const dialogueWordCount = await page
+    .locator(".dialogue-turn:not(.dialogue-turn-intro)")
+    .count();
+  const dialogueReviewReady =
+    dialogueWordCount === 40 &&
+    (await page.locator(".dialogue-choice-grid button").count()) >= 2;
+  if (dialogueReviewReady) {
+    await page.locator(".dialogue-choice-grid button").first().click();
     await page.locator(".context-feedback").waitFor();
   }
   await page.screenshot({
@@ -157,7 +203,7 @@ async function capture() {
 
   await page.getByRole("button", { name: "取消" }).click();
   await page.evaluate(() => navigator.serviceWorker.ready);
-  await page.reload({ waitUntil: "networkidle" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await context.setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded" });
   const offlineReady = await page
@@ -179,7 +225,7 @@ async function capture() {
   });
   const darkPage = await darkContext.newPage();
   await darkPage.goto(baseUrl, {
-    waitUntil: "networkidle",
+    waitUntil: "domcontentloaded",
   });
   await darkPage.locator(".word-card").waitFor();
   await darkPage.screenshot({
@@ -195,7 +241,8 @@ async function capture() {
     definitionFound,
     bilingualReady,
     englishOnlyReady,
-    choiceReviewReady,
+    dialogueReviewReady,
+    dialogueWordCount,
     offlineReady,
     offlineReadingReady,
     manifestStatus: manifestResponse.status(),
@@ -217,7 +264,7 @@ async function capture() {
     !report.definitionFound ||
     !report.bilingualReady ||
     !report.englishOnlyReady ||
-    !report.choiceReviewReady ||
+    !report.dialogueReviewReady ||
     !report.offlineReady ||
     !report.offlineReadingReady ||
     report.manifestStatus !== 200 ||
