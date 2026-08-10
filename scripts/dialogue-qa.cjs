@@ -125,6 +125,10 @@ async function run() {
     await page.locator(".dialogue-scenario-title h3").innerText()
   ).replace(/\s+/g, " ").trim();
   const sceneChapterCount = await page.locator(".dialogue-scene-divider").count();
+  const plotBeatCount = await page.locator(".dialogue-plot-track li").count();
+  const activePlotBeatCount = await page
+    .locator(".dialogue-plot-track li.is-active")
+    .count();
   const missedId = await answerCurrent(page, false);
   markProgress("checking retry queue");
   await page.getByRole("button", { name: "继续对话" }).click();
@@ -154,10 +158,36 @@ async function run() {
         })
         .filter((button) => button.width < 44 || button.height < 44),
     );
+  markProgress("finishing the story");
+  let completionSteps = 0;
+  while (
+    !(await page.locator(".dialogue-story-outcome").isVisible().catch(() => false)) &&
+    completionSteps < 50
+  ) {
+    await answerCurrent(page, true);
+    await page.locator(".context-feedback button").click();
+    completionSteps += 1;
+  }
+  const storyEndingVisible = await page
+    .locator(".dialogue-story-outcome")
+    .isVisible()
+    .catch(() => false);
+  const transcriptResolutionVisible = await page
+    .locator(".dialogue-story-resolution")
+    .isVisible()
+    .catch(() => false);
+  await page.screenshot({
+    path: path.join(outputDirectory, "iphone-dialogue-complete.png"),
+    fullPage: true,
+  });
   const report = {
     dialogueWordCount,
     scenarioTitle,
     sceneChapterCount,
+    plotBeatCount,
+    activePlotBeatCount,
+    storyEndingVisible,
+    transcriptResolutionVisible,
     retryAfterThreeTurns: retryId === missedId,
     consoleErrors,
     undersizedTargets,
@@ -175,6 +205,10 @@ async function run() {
     report.dialogueWordCount !== 40 ||
     report.scenarioTitle.length === 0 ||
     report.sceneChapterCount < 1 ||
+    report.plotBeatCount !== 4 ||
+    report.activePlotBeatCount !== 1 ||
+    !report.storyEndingVisible ||
+    !report.transcriptResolutionVisible ||
     !report.retryAfterThreeTurns ||
     report.consoleErrors.length > 0 ||
     report.undersizedTargets.length > 0

@@ -7,6 +7,7 @@ import {
   advanceDialogueQueue,
   buildDialogueChoices,
   buildDialogueScript,
+  getDialoguePlotBeatIndex,
   getTodayLearnedWordCount,
   getTodayLearnedWords,
   type DialogueLine,
@@ -214,6 +215,11 @@ export function ReviewPractice({
               ? `${needsMoreIds.size} 个词已标记为需要加强。`
               : "所有错词都已在本轮重新答对。"}
           </p>
+          <div className="dialogue-story-outcome">
+            <span>剧情结局</span>
+            <strong>{session.scenario.story.resolutionZh}</strong>
+            <small>{session.scenario.story.resolution}</small>
+          </div>
           <div className="summary-actions">
             <button
               className="secondary-button"
@@ -263,15 +269,18 @@ export function ReviewPractice({
     <section className="dialogue-practice" aria-labelledby="dialogue-title">
       <div className="dialogue-practice-heading">
         <div>
-          <span>主题场景 · 最多 40 词</span>
-          <h2 id="dialogue-title">在一个场景里用今天的词</h2>
+          <span>剧情复习 · 最多 40 词</span>
+          <h2 id="dialogue-title">{session.scenario.story.titleZh}</h2>
         </div>
         <strong>
           {resolvedIds.size}<small> / {session.lines.length}</small>
         </strong>
       </div>
 
-      <DialogueScenarioCard scenario={session.scenario} />
+      <DialogueScenarioCard
+        resolvedCount={resolvedIds.size}
+        scenario={session.scenario}
+      />
 
       <DialogueTranscript
         activeRef={activeTurnRef}
@@ -298,7 +307,7 @@ export function ReviewPractice({
             )}
           </div>
 
-          <div className="dialogue-choice-grid" aria-label="选择对话中缺少的单词">
+          <div className="dialogue-choice-grid" aria-label="补全剧情线索中缺少的单词">
             {choices.map((option) => {
               const isAnswer = option.id === currentWord.id;
               const isSelected = option.id === selectedId;
@@ -337,7 +346,7 @@ export function ReviewPractice({
                   {answerCorrect
                     ? answeredAttempt > 1
                       ? "这次答对了"
-                      : "正确，句子接上了"
+                      : "正确，线索补全了"
                     : `答案是 ${currentWord.term}`}
                 </strong>
                 {!answerCorrect && answeredAttempt < DIALOGUE_MAX_ATTEMPTS && (
@@ -355,26 +364,55 @@ export function ReviewPractice({
   );
 }
 
-function DialogueScenarioCard({ scenario }: { scenario: DialogueScenario }) {
+function DialogueScenarioCard({
+  scenario,
+  resolvedCount,
+}: {
+  scenario: DialogueScenario;
+  resolvedCount: number;
+}) {
+  const activeBeat = getDialoguePlotBeatIndex(
+    resolvedCount,
+    scenario.wordCount,
+    scenario.story.plotBeats.length,
+  );
+  const storyComplete =
+    scenario.wordCount > 0 && resolvedCount >= scenario.wordCount;
   return (
-    <section className="dialogue-scenario-card" aria-label="今日对话场景">
+    <section className="dialogue-scenario-card" aria-label="今日剧情任务">
       <div className="dialogue-scenario-title">
-        <span>今日主场景</span>
+        <span>今日剧情</span>
         <h3>
-          {scenario.primaryTheme.titleZh}
-          <small>{scenario.primaryTheme.title}</small>
+          {scenario.story.titleZh}
+          <small>{scenario.story.title}</small>
         </h3>
       </div>
       <dl>
         <div>
-          <dt>地点</dt>
-          <dd>{scenario.primaryTheme.settingZh}</dd>
+          <dt>开场</dt>
+          <dd>{scenario.story.premiseZh}</dd>
         </div>
         <div>
           <dt>任务</dt>
-          <dd>{scenario.primaryTheme.missionZh}</dd>
+          <dd>{scenario.story.tensionZh}</dd>
         </div>
       </dl>
+      <ol className="dialogue-plot-track" aria-label="剧情进度">
+        {scenario.story.plotBeats.map((beat, index) => {
+          const stateClass =
+            storyComplete || index < activeBeat
+              ? "is-complete"
+              : index === activeBeat
+                ? "is-active"
+                : "";
+          return (
+            <li className={stateClass} key={beat.title}>
+              <span>{index + 1}</span>
+              <small>{beat.titleZh}</small>
+            </li>
+          );
+        })}
+      </ol>
       <div className="dialogue-scenario-chapters" aria-label="本段场景章节">
         {scenario.themes.map((theme, index) => (
           <span key={theme.id}>
@@ -415,14 +453,9 @@ function DialogueTranscript({
         <span aria-hidden="true">M</span>
         <div>
           <strong>Mia</strong>
-          <p>
-            Today&apos;s main scene is {scenario.primaryTheme.title.toLowerCase()}.
-            Let&apos;s use our words to move it forward.
-          </p>
+          <p>{scenario.story.premise}</p>
           {(revealAll && showTranslations) && (
-            <small>
-              今天的主场景是“{scenario.primaryTheme.titleZh}”。让我们用学过的词推动对话。
-            </small>
+            <small>{scenario.story.premiseZh}</small>
           )}
         </div>
       </div>
@@ -430,9 +463,9 @@ function DialogueTranscript({
         <span aria-hidden="true">L</span>
         <div>
           <strong>Leo</strong>
-          <p>{scenario.primaryTheme.mission}</p>
+          <p>{scenario.story.tension}</p>
           {(revealAll && showTranslations) && (
-            <small>{scenario.primaryTheme.missionZh}</small>
+            <small>{scenario.story.tensionZh}</small>
           )}
         </div>
       </div>
@@ -451,7 +484,7 @@ function DialogueTranscript({
               <div className="dialogue-scene-divider">
                 <span>场景 {chapterNumber}</span>
                 <strong>{line.theme.titleZh}</strong>
-                <small>{line.theme.settingZh}</small>
+                <small>{line.theme.transitionZh}</small>
               </div>
             )}
             <div
@@ -466,7 +499,9 @@ function DialogueTranscript({
               <div>
                 <strong>{line.speaker}</strong>
                 <small className="dialogue-lead">{line.lead}</small>
-                <p>{revealWord ? line.word.example : line.prompt}</p>
+                <p className="dialogue-clue-line">
+                  “{revealWord ? line.word.example : line.prompt}”
+                </p>
                 {showTranslation && (
                   <small className="dialogue-translation">
                     {line.leadTranslation} {line.translation}
@@ -487,6 +522,15 @@ function DialogueTranscript({
           </Fragment>
         );
       })}
+      {revealAll && (
+        <div className="dialogue-story-resolution">
+          <span>结局</span>
+          <div>
+            <strong>{scenario.story.resolutionZh}</strong>
+            <small>{scenario.story.resolution}</small>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

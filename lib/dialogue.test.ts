@@ -4,6 +4,7 @@ import {
   advanceDialogueQueue,
   buildDialogueLines,
   buildDialogueScript,
+  getDialoguePlotBeatIndex,
   getDialogueTheme,
   getTodayLearnedWordCount,
   getTodayLearnedWords,
@@ -120,6 +121,8 @@ describe("dialogue review", () => {
     const script = buildDialogueScript(words);
 
     expect(script.scenario.primaryTheme.id).toBe("work-study");
+    expect(script.scenario.story.titleZh).toBe("最后一刻的汇报");
+    expect(script.scenario.story.plotBeats).toHaveLength(4);
     expect(script.scenario.themes.map((theme) => theme.id)).toEqual([
       "work-study",
       "travel",
@@ -132,6 +135,16 @@ describe("dialogue review", () => {
       "travel",
     ]);
     expect(script.lines.filter((line) => line.isSceneStart)).toHaveLength(2);
+    expect(script.lines[0].lead).toContain("slide");
+    expect(script.lines[3].theme.transitionZh).toContain("路线");
+  });
+
+  it("moves through four stable plot beats as words are resolved", () => {
+    expect(getDialoguePlotBeatIndex(0, 40)).toBe(0);
+    expect(getDialoguePlotBeatIndex(10, 40)).toBe(1);
+    expect(getDialoguePlotBeatIndex(20, 40)).toBe(2);
+    expect(getDialoguePlotBeatIndex(30, 40)).toBe(3);
+    expect(getDialoguePlotBeatIndex(40, 40)).toBe(3);
   });
 
   it("returns a missed word after three other dialogue turns", () => {

@@ -1780,6 +1780,78 @@ button:disabled {
   margin: 0;
 }
 
+.dialogue-plot-track {
+  border-top: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 12px 0 0;
+}
+
+.dialogue-plot-track li {
+  min-width: 0;
+  position: relative;
+  text-align: center;
+}
+
+.dialogue-plot-track li:not(:last-child)::after {
+  background: var(--rule);
+  content: "";
+  height: 1px;
+  left: calc(50% + 13px);
+  position: absolute;
+  top: 12px;
+  width: calc(100% - 26px);
+}
+
+.dialogue-plot-track li > span {
+  align-items: center;
+  background: var(--card-stock);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  color: var(--pencil);
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 750;
+  height: 25px;
+  justify-content: center;
+  position: relative;
+  width: 25px;
+  z-index: 1;
+}
+
+.dialogue-plot-track li.is-active > span {
+  background: var(--blue-ink);
+  border-color: var(--blue-ink);
+  color: var(--card-stock);
+}
+
+.dialogue-plot-track li.is-complete > span {
+  background: var(--memory-green);
+  border-color: var(--memory-green);
+  color: var(--card-stock);
+}
+
+.dialogue-plot-track li.is-complete:not(:last-child)::after {
+  background: var(--memory-green);
+}
+
+.dialogue-plot-track small {
+  color: var(--pencil);
+  display: block;
+  font-size: 9px;
+  line-height: 1.3;
+  margin: 5px auto 0;
+  max-width: 70px;
+}
+
+.dialogue-plot-track li.is-active small,
+.dialogue-plot-track li.is-complete small {
+  color: var(--ink-soft);
+  font-weight: 650;
+}
+
 .dialogue-scenario-chapters {
   border-top: 1px solid var(--rule);
   display: flex;
@@ -1925,6 +1997,10 @@ button:disabled {
   margin: 3px 0 0;
 }
 
+.dialogue-turn .dialogue-clue-line {
+  hanging-punctuation: first last;
+}
+
 .dialogue-turn-intro p {
   color: var(--pencil);
   font-size: 14px;
@@ -2028,6 +2104,62 @@ button:disabled {
 .dialogue-summary .summary-actions {
   display: grid;
   gap: 9px;
+}
+
+.dialogue-story-outcome {
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 3px;
+  margin: 14px 0;
+  padding-top: 12px;
+  text-align: left;
+}
+
+.dialogue-story-outcome > span,
+.dialogue-story-resolution > span {
+  color: var(--blue-ink);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+}
+
+.dialogue-story-outcome > strong {
+  color: var(--ink-soft);
+  font-family: ui-serif, Georgia, "Songti SC", serif;
+  font-size: 15px;
+}
+
+.dialogue-story-outcome > small {
+  color: var(--pencil);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.dialogue-story-resolution {
+  align-items: flex-start;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 32px minmax(0, 1fr);
+  margin: 18px 3px 2px;
+  padding-top: 12px;
+}
+
+.dialogue-story-resolution > div {
+  display: grid;
+  gap: 3px;
+}
+
+.dialogue-story-resolution strong {
+  color: var(--ink-soft);
+  font-family: ui-serif, Georgia, "Songti SC", serif;
+  font-size: 14px;
+}
+
+.dialogue-story-resolution small {
+  color: var(--pencil);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .dialogue-language-row {
