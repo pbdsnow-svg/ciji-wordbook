@@ -3,12 +3,14 @@ import {
   DIALOGUE_WORD_LIMIT,
   advanceDialogueQueue,
   buildDialogueLines,
+  buildDialogueScript,
+  getDialogueTheme,
   getTodayLearnedWordCount,
   getTodayLearnedWords,
 } from "./dialogue";
 import { ensureDailyWords } from "./learning";
 import { createInitialState } from "./seed";
-import type { VocabularyState } from "./types";
+import type { VocabularyState, VocabularyWord } from "./types";
 
 describe("dialogue review", () => {
   const now = new Date("2026-08-10T08:00:00+08:00");
@@ -83,6 +85,53 @@ describe("dialogue review", () => {
     for (const line of lines) {
       expect(line.prompt.toLowerCase()).not.toContain(line.word.term.toLowerCase());
     }
+  });
+
+  it("classifies familiar words into stable offline themes", () => {
+    const base = createStudiedState(1).words[0];
+    const word = (term: string, example: string): VocabularyWord => ({
+      ...base,
+      id: `word-${term}`,
+      term,
+      example,
+    });
+
+    expect(getDialogueTheme(word("ticket", "I bought a ticket."))).toMatchObject({
+      id: "travel",
+      titleZh: "出门旅行",
+    });
+    expect(getDialogueTheme(word("project", "The project starts today."))).toMatchObject({
+      id: "work-study",
+    });
+    expect(getDialogueTheme(word("coffee", "The coffee is ready."))).toMatchObject({
+      id: "food-shopping",
+    });
+  });
+
+  it("groups related words into scene chapters while keeping one dialogue", () => {
+    const base = createStudiedState(1).words[0];
+    const words = [
+      { ...base, id: "travel-ticket", term: "ticket", example: "I need a ticket." },
+      { ...base, id: "work-project", term: "project", example: "The project is ready." },
+      { ...base, id: "travel-hotel", term: "hotel", example: "The hotel is nearby." },
+      { ...base, id: "work-team", term: "team", example: "Our team can help." },
+      { ...base, id: "work-report", term: "report", example: "Read the report." },
+    ];
+    const script = buildDialogueScript(words);
+
+    expect(script.scenario.primaryTheme.id).toBe("work-study");
+    expect(script.scenario.themes.map((theme) => theme.id)).toEqual([
+      "work-study",
+      "travel",
+    ]);
+    expect(script.lines.map((line) => line.theme.id)).toEqual([
+      "work-study",
+      "work-study",
+      "work-study",
+      "travel",
+      "travel",
+    ]);
+    expect(script.lines.filter((line) => line.isSceneStart)).toHaveLength(2);
   });
 
   it("returns a missed word after three other dialogue turns", () => {

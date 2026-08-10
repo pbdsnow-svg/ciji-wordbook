@@ -1713,6 +1713,95 @@ button:disabled {
   letter-spacing: 0;
 }
 
+.dialogue-scenario-card {
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-group);
+  margin-bottom: 12px;
+  padding: 14px;
+}
+
+.dialogue-scenario-title {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.dialogue-scenario-title > span {
+  color: var(--blue-ink);
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  padding-top: 3px;
+}
+
+.dialogue-scenario-title h3 {
+  font-family: ui-serif, Georgia, "Songti SC", serif;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  text-align: right;
+}
+
+.dialogue-scenario-title h3 small {
+  color: var(--pencil);
+  display: block;
+  font-family: var(--font-system);
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.dialogue-scenario-card dl {
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding-top: 11px;
+}
+
+.dialogue-scenario-card dl > div {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: 36px minmax(0, 1fr);
+}
+
+.dialogue-scenario-card dt {
+  color: var(--pencil);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.dialogue-scenario-card dd {
+  color: var(--ink-soft);
+  font-size: 13px;
+  margin: 0;
+}
+
+.dialogue-scenario-chapters {
+  border-top: 1px solid var(--rule);
+  display: flex;
+  gap: 13px;
+  margin-top: 11px;
+  overflow-x: auto;
+  padding-top: 10px;
+  scrollbar-width: none;
+}
+
+.dialogue-scenario-chapters::-webkit-scrollbar {
+  display: none;
+}
+
+.dialogue-scenario-chapters span {
+  color: var(--pencil);
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
 .dialogue-transcript {
   background: var(--card-stock);
   border-radius: var(--radius-card);
@@ -1722,6 +1811,41 @@ button:disabled {
   overscroll-behavior: contain;
   padding: 15px 12px;
   scroll-padding-block: 90px;
+}
+
+.dialogue-scene-divider {
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 1px 9px;
+  grid-template-columns: auto minmax(0, 1fr);
+  margin: 18px 3px 10px;
+  padding-top: 10px;
+}
+
+.dialogue-turn-intro + .dialogue-scene-divider {
+  margin-top: 14px;
+}
+
+.dialogue-scene-divider > span {
+  color: var(--blue-ink);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  padding-top: 2px;
+  text-transform: uppercase;
+}
+
+.dialogue-scene-divider > strong {
+  color: var(--ink-soft);
+  font-family: ui-serif, Georgia, "Songti SC", serif;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.dialogue-scene-divider > small {
+  color: var(--pencil);
+  font-size: 10px;
+  grid-column: 2;
 }
 
 .dialogue-turn {
@@ -1963,6 +2087,15 @@ button:disabled {
 
   .dialogue-turn > div {
     width: calc(100% - 39px);
+  }
+
+  .dialogue-scenario-title {
+    display: block;
+  }
+
+  .dialogue-scenario-title h3 {
+    margin-top: 4px;
+    text-align: left;
   }
 }
 

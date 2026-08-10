@@ -154,8 +154,11 @@ async function capture() {
   const dialogueWordCount = await page
     .locator(".dialogue-turn:not(.dialogue-turn-intro)")
     .count();
+  const sceneChapterCount = await page.locator(".dialogue-scene-divider").count();
   const dialogueReviewReady =
     dialogueWordCount === 40 &&
+    sceneChapterCount >= 1 &&
+    (await page.locator(".dialogue-scenario-card").isVisible()) &&
     (await page.locator(".dialogue-choice-grid button").count()) >= 2;
   if (dialogueReviewReady) {
     await page.locator(".dialogue-choice-grid button").first().click();
@@ -243,6 +246,7 @@ async function capture() {
     englishOnlyReady,
     dialogueReviewReady,
     dialogueWordCount,
+    sceneChapterCount,
     offlineReady,
     offlineReadingReady,
     manifestStatus: manifestResponse.status(),

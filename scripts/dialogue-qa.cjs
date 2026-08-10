@@ -5,6 +5,10 @@ const path = require("node:path");
 const outputDirectory = path.resolve(__dirname, "..", "qa");
 const baseUrl = process.env.QA_BASE_URL || "http://127.0.0.1:3000";
 
+function markProgress(step) {
+  fs.writeFileSync(path.join(outputDirectory, "dialogue-qa-progress.txt"), step);
+}
+
 async function answerCurrent(page, correct) {
   const currentId = await page
     .locator(".dialogue-turn.is-active")
@@ -31,6 +35,7 @@ async function answerCurrent(page, correct) {
 
 async function run() {
   fs.mkdirSync(outputDirectory, { recursive: true });
+  markProgress("launching browser");
   const browser = await chromium.launch({
     args: ["--no-proxy-server"],
     headless: true,
@@ -46,12 +51,22 @@ async function run() {
   });
   const page = await context.newPage();
   const consoleErrors = [];
+  const errorLogPath = path.join(outputDirectory, "dialogue-qa-errors.txt");
+  fs.writeFileSync(errorLogPath, "");
   page.on("console", (message) => {
-    if (message.type() === "error") consoleErrors.push(message.text());
+    if (message.type() === "error") {
+      consoleErrors.push(message.text());
+      fs.appendFileSync(errorLogPath, `console: ${message.text()}\n`);
+    }
   });
-  page.on("pageerror", (error) => consoleErrors.push(error.message));
+  page.on("pageerror", (error) => {
+    consoleErrors.push(error.message);
+    fs.appendFileSync(errorLogPath, `pageerror: ${error.stack || error.message}\n`);
+  });
 
+  markProgress("opening app");
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  markProgress("waiting for today's word card");
   await page.locator(".word-card").waitFor();
   await page.evaluate(() => {
     const key = "ciji-vocabulary-state-v2";
@@ -60,6 +75,7 @@ async function run() {
     state.settings.dailyGoal = 40;
     window.localStorage.setItem(key, JSON.stringify(state));
   });
+  markProgress("reloading daily goal");
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator(".word-card").waitFor();
   await page.evaluate(() => {
@@ -79,16 +95,38 @@ async function run() {
     });
     window.localStorage.setItem(key, JSON.stringify(state));
   });
+  markProgress("reloading studied words");
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator(".word-card").waitFor();
   await page.getByRole("button", { name: "阅读", exact: true }).click();
   await page.getByRole("button", { name: "复习练习" }).click();
-  await page.locator(".dialogue-transcript").waitFor();
+  markProgress("waiting for themed dialogue");
+  const dialogueVisible = await page
+    .locator(".dialogue-transcript")
+    .waitFor({ timeout: 5_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!dialogueVisible) {
+    await page.screenshot({
+      path: path.join(outputDirectory, "dialogue-qa-failure.png"),
+      fullPage: true,
+    });
+    fs.writeFileSync(
+      path.join(outputDirectory, "dialogue-qa-failure.html"),
+      await page.content(),
+    );
+    throw new Error("The themed dialogue did not become visible within 5 seconds");
+  }
 
   const dialogueWordCount = await page
     .locator(".dialogue-turn:not(.dialogue-turn-intro)")
     .count();
+  const scenarioTitle = (
+    await page.locator(".dialogue-scenario-title h3").innerText()
+  ).replace(/\s+/g, " ").trim();
+  const sceneChapterCount = await page.locator(".dialogue-scene-divider").count();
   const missedId = await answerCurrent(page, false);
+  markProgress("checking retry queue");
   await page.getByRole("button", { name: "继续对话" }).click();
   for (let index = 0; index < 3; index += 1) {
     await answerCurrent(page, true);
@@ -118,6 +156,8 @@ async function run() {
     );
   const report = {
     dialogueWordCount,
+    scenarioTitle,
+    sceneChapterCount,
     retryAfterThreeTurns: retryId === missedId,
     consoleErrors,
     undersizedTargets,
@@ -126,11 +166,15 @@ async function run() {
     path.join(outputDirectory, "dialogue-qa-report.json"),
     JSON.stringify(report, null, 2),
   );
+  markProgress("closing browser");
   await context.close();
   await browser.close();
+  markProgress("complete");
 
   if (
     report.dialogueWordCount !== 40 ||
+    report.scenarioTitle.length === 0 ||
+    report.sceneChapterCount < 1 ||
     !report.retryAfterThreeTurns ||
     report.consoleErrors.length > 0 ||
     report.undersizedTargets.length > 0

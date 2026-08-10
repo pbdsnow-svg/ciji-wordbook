@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   DIALOGUE_MAX_ATTEMPTS,
   DIALOGUE_WORD_LIMIT,
   advanceDialogueQueue,
   buildDialogueChoices,
-  buildDialogueLines,
+  buildDialogueScript,
   getTodayLearnedWordCount,
   getTodayLearnedWords,
   type DialogueLine,
+  type DialogueScenario,
 } from "@/lib/dialogue";
 import { reviewWord } from "@/lib/srs";
 import type { VocabularyState, VocabularyWord } from "@/lib/types";
@@ -17,6 +18,7 @@ import type { VocabularyState, VocabularyWord } from "@/lib/types";
 interface DialogueSession {
   lines: DialogueLine[];
   offset: number;
+  scenario: DialogueScenario;
   totalCount: number;
   words: VocabularyWord[];
 }
@@ -32,9 +34,11 @@ function createSession(
     offset,
     DIALOGUE_WORD_LIMIT,
   );
+  const script = buildDialogueScript(words);
   return {
-    lines: buildDialogueLines(words),
+    lines: script.lines,
     offset,
+    scenario: script.scenario,
     totalCount: getTodayLearnedWordCount(state, day),
     words,
   };
@@ -248,6 +252,7 @@ export function ReviewPractice({
         <DialogueTranscript
           lines={session.lines}
           revealAll
+          scenario={session.scenario}
           showTranslations={showTranslations}
         />
       </>
@@ -258,13 +263,15 @@ export function ReviewPractice({
     <section className="dialogue-practice" aria-labelledby="dialogue-title">
       <div className="dialogue-practice-heading">
         <div>
-          <span>今日对话 · 最多 40 词</span>
-          <h2 id="dialogue-title">把今天的词连起来</h2>
+          <span>主题场景 · 最多 40 词</span>
+          <h2 id="dialogue-title">在一个场景里用今天的词</h2>
         </div>
         <strong>
           {resolvedIds.size}<small> / {session.lines.length}</small>
         </strong>
       </div>
+
+      <DialogueScenarioCard scenario={session.scenario} />
 
       <DialogueTranscript
         activeRef={activeTurnRef}
@@ -272,6 +279,7 @@ export function ReviewPractice({
         lines={session.lines}
         revealCurrent={answered}
         resolvedIds={resolvedIds}
+        scenario={session.scenario}
         showCurrentTranslation={showHint || answered}
         transcriptRef={transcriptRef}
       />
@@ -347,8 +355,40 @@ export function ReviewPractice({
   );
 }
 
+function DialogueScenarioCard({ scenario }: { scenario: DialogueScenario }) {
+  return (
+    <section className="dialogue-scenario-card" aria-label="今日对话场景">
+      <div className="dialogue-scenario-title">
+        <span>今日主场景</span>
+        <h3>
+          {scenario.primaryTheme.titleZh}
+          <small>{scenario.primaryTheme.title}</small>
+        </h3>
+      </div>
+      <dl>
+        <div>
+          <dt>地点</dt>
+          <dd>{scenario.primaryTheme.settingZh}</dd>
+        </div>
+        <div>
+          <dt>任务</dt>
+          <dd>{scenario.primaryTheme.missionZh}</dd>
+        </div>
+      </dl>
+      <div className="dialogue-scenario-chapters" aria-label="本段场景章节">
+        {scenario.themes.map((theme, index) => (
+          <span key={theme.id}>
+            {index + 1}. {theme.titleZh}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function DialogueTranscript({
   lines,
+  scenario,
   currentId,
   resolvedIds = new Set<string>(),
   revealCurrent = false,
@@ -359,6 +399,7 @@ function DialogueTranscript({
   activeRef,
 }: {
   lines: DialogueLine[];
+  scenario: DialogueScenario;
   currentId?: string;
   resolvedIds?: Set<string>;
   revealCurrent?: boolean;
@@ -374,9 +415,14 @@ function DialogueTranscript({
         <span aria-hidden="true">M</span>
         <div>
           <strong>Mia</strong>
-          <p>Let&apos;s connect the words we studied today in one conversation.</p>
+          <p>
+            Today&apos;s main scene is {scenario.primaryTheme.title.toLowerCase()}.
+            Let&apos;s use our words to move it forward.
+          </p>
           {(revealAll && showTranslations) && (
-            <small>让我们把今天学过的单词放进同一段对话。</small>
+            <small>
+              今天的主场景是“{scenario.primaryTheme.titleZh}”。让我们用学过的词推动对话。
+            </small>
           )}
         </div>
       </div>
@@ -384,9 +430,9 @@ function DialogueTranscript({
         <span aria-hidden="true">L</span>
         <div>
           <strong>Leo</strong>
-          <p>Good idea. Read each clue and complete the missing word.</p>
+          <p>{scenario.primaryTheme.mission}</p>
           {(revealAll && showTranslations) && (
-            <small>好主意。读每个线索，补全缺少的单词。</small>
+            <small>{scenario.primaryTheme.missionZh}</small>
           )}
         </div>
       </div>
@@ -397,38 +443,48 @@ function DialogueTranscript({
         const revealWord = revealAll || isResolved || (isCurrent && revealCurrent);
         const showTranslation =
           showTranslations || (isCurrent && showCurrentTranslation);
+        const chapterNumber =
+          scenario.themes.findIndex((theme) => theme.id === line.theme.id) + 1;
         return (
-          <div
-            aria-current={isCurrent ? "step" : undefined}
-            className={`dialogue-turn ${line.speaker === "Leo" ? "is-leo" : ""} ${
-              isCurrent ? "is-active" : ""
-            } ${isResolved ? "is-resolved" : ""}`}
-            data-word-id={line.word.id}
-            key={line.id}
-            ref={isCurrent ? activeRef : undefined}
-          >
-            <span aria-hidden="true">{line.speaker.charAt(0)}</span>
-            <div>
-              <strong>{line.speaker}</strong>
-              <small className="dialogue-lead">{line.lead}</small>
-              <p>{revealWord ? line.word.example : line.prompt}</p>
-              {showTranslation && (
-                <small className="dialogue-translation">
-                  {line.leadTranslation} {line.translation}
-                </small>
-              )}
-              {revealAll && (
-                <button
-                  className="dialogue-word-button"
-                  onClick={() => speak(line.word)}
-                  type="button"
-                >
-                  {line.word.term}
-                  <small>{line.word.meaning}</small>
-                </button>
-              )}
+          <Fragment key={line.id}>
+            {line.isSceneStart && (
+              <div className="dialogue-scene-divider">
+                <span>场景 {chapterNumber}</span>
+                <strong>{line.theme.titleZh}</strong>
+                <small>{line.theme.settingZh}</small>
+              </div>
+            )}
+            <div
+              aria-current={isCurrent ? "step" : undefined}
+              className={`dialogue-turn ${line.speaker === "Leo" ? "is-leo" : ""} ${
+                isCurrent ? "is-active" : ""
+              } ${isResolved ? "is-resolved" : ""}`}
+              data-word-id={line.word.id}
+              ref={isCurrent ? activeRef : undefined}
+            >
+              <span aria-hidden="true">{line.speaker.charAt(0)}</span>
+              <div>
+                <strong>{line.speaker}</strong>
+                <small className="dialogue-lead">{line.lead}</small>
+                <p>{revealWord ? line.word.example : line.prompt}</p>
+                {showTranslation && (
+                  <small className="dialogue-translation">
+                    {line.leadTranslation} {line.translation}
+                  </small>
+                )}
+                {revealAll && (
+                  <button
+                    className="dialogue-word-button"
+                    onClick={() => speak(line.word)}
+                    type="button"
+                  >
+                    {line.word.term}
+                    <small>{line.word.meaning}</small>
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          </Fragment>
         );
       })}
     </div>
