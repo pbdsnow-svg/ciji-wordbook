@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { DailyReader } from "@/components/DailyReader";
+import { IeltsDashboard } from "@/components/IeltsDashboard";
 import { ReviewPractice } from "@/components/ReviewPractice";
 import {
   CEFR_LEVELS,
@@ -37,7 +38,7 @@ import type {
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
-type Tab = "today" | "library" | "plan" | "context";
+type Tab = "ielts" | "today" | "library" | "plan" | "context";
 type LearningPhase = "recognition" | "spelling";
 type ReadingSection = "daily" | "review";
 type IconName =
@@ -201,7 +202,7 @@ function LevelPicker({
 
 export function VocabApp() {
   const [state, setState] = useState<VocabularyState | null>(null);
-  const [tab, setTab] = useState<Tab>("today");
+  const [tab, setTab] = useState<Tab>("ielts");
   const [queue, setQueue] = useState<string[]>([]);
   const [phase, setPhase] = useState<LearningPhase>("recognition");
   const [revealed, setRevealed] = useState(false);
@@ -425,7 +426,7 @@ export function VocabApp() {
     if (!state || state.settings.activePlan) return;
     const nextState = ensureDailyWords({
       ...state,
-      settings: { ...state.settings, selectedLevel: level },
+      settings: { ...state.settings, selectedLevel: level, ieltsDailyGoal: undefined },
     });
     updateState(nextState);
     rebuildQueue(nextState);
@@ -435,7 +436,7 @@ export function VocabApp() {
     if (!state || state.settings.activePlan) return;
     const nextState = ensureDailyWords({
       ...state,
-      settings: { ...state.settings, dailyGoal },
+      settings: { ...state.settings, dailyGoal, ieltsDailyGoal: undefined },
     });
     updateState(nextState);
     rebuildQueue(nextState);
@@ -474,6 +475,7 @@ export function VocabApp() {
         activePlan: plan,
         selectedLevel: level,
         dailyGoal: dailyNewWords,
+        ieltsDailyGoal: undefined,
       },
     });
     updateState(nextState);
@@ -489,6 +491,31 @@ export function VocabApp() {
       ...state,
       settings: { ...state.settings, activePlan: null },
     });
+  }
+
+  function openIeltsVocabulary(wordTarget: number) {
+    if (!state) return;
+    const nextState = ensureDailyWords({
+      ...state,
+      settings: {
+        ...state.settings,
+        ieltsDailyGoal: wordTarget,
+        selectedLevel: "B2",
+      },
+    });
+    updateState(nextState);
+    rebuildQueue(nextState);
+    setTab("today");
+  }
+
+  function openIeltsReading() {
+    setReadingSection("daily");
+    setTab("context");
+  }
+
+  function openIeltsReview() {
+    setReadingSection("review");
+    setTab("context");
   }
 
   if (!state) {
@@ -510,12 +537,20 @@ export function VocabApp() {
   return (
     <div className="app-shell">
       <main className="app-main">
+        {tab === "ielts" && (
+          <IeltsDashboard
+            onOpenReading={openIeltsReading}
+            onOpenReview={openIeltsReview}
+            onOpenVocabulary={openIeltsVocabulary}
+          />
+        )}
+
         {tab === "today" && (
           <section className="screen today-screen" aria-labelledby="today-title">
             <header className="screen-header">
               <div>
-                <p className="eyebrow">{getDateHeading()}</p>
-                <h1 id="today-title">今日学习</h1>
+                <p className="eyebrow">{getDateHeading()} · 雅思词汇</p>
+                <h1 id="today-title">词汇训练</h1>
               </div>
               <button
                 aria-label="添加单词"
@@ -570,7 +605,7 @@ export function VocabApp() {
                   <Icon name="share" />
                 </span>
                 <span>
-                  <strong>把词迹放到主屏幕</strong>
+                  <strong>把雅思重启放到主屏幕</strong>
                   <small>像普通 App 一样打开，也能离线复习</small>
                 </span>
                 <span aria-hidden="true" className="disclosure">
@@ -1032,10 +1067,11 @@ export function VocabApp() {
       <nav className="tab-bar" aria-label="主要导航">
         {(
           [
-            ["today", "today", "今日"],
-            ["library", "library", "词库"],
-            ["plan", "plan", "计划"],
+            ["ielts", "today", "训练"],
+            ["today", "spell", "背词"],
             ["context", "context", "阅读"],
+            ["library", "library", "词库"],
+            ["plan", "plan", "设置"],
           ] as Array<[Tab, IconName, string]>
         ).map(([value, icon, label]) => (
           <button
@@ -1133,7 +1169,7 @@ export function VocabApp() {
               <span aria-hidden="true" className="sheet-header-spacer">
                 完成
               </span>
-              <h2>安装词迹</h2>
+              <h2>安装雅思重启</h2>
               <button
                 className="sheet-text-button"
                 onClick={() => setShowInstallSheet(false)}
@@ -1146,7 +1182,7 @@ export function VocabApp() {
               词
             </div>
             <p className="install-intro">
-              添加到主屏幕后，词迹会以独立窗口打开，并保留离线学习能力。
+              添加到主屏幕后，它会像独立 App 一样打开，并保留离线训练能力。
             </p>
             <ol className="install-steps">
               <li>

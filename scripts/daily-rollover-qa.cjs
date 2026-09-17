@@ -4,7 +4,12 @@ const baseUrl = process.env.QA_BASE_URL || "http://127.0.0.1:3000";
 const storageKey = "ciji-vocabulary-state-v2";
 
 async function run() {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    ...(process.env.QA_BROWSER_PATH
+      ? { executablePath: process.env.QA_BROWSER_PATH }
+      : {}),
+  });
   const context = await browser.newContext({
     viewport: { width: 430, height: 932 },
     timezoneId: "Asia/Shanghai",
@@ -33,6 +38,7 @@ async function run() {
 
   const page = await context.newPage();
   await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "背词" }).click();
   await page.locator(".word-card").waitFor();
 
   const firstDay = await page.evaluate(({ storageKey }) => {

@@ -30,6 +30,7 @@ async function capture() {
   page.on("pageerror", (error) => consoleErrors.push(error.message));
 
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "背词" }).click();
   await page.locator(".word-card").waitFor();
   await page.screenshot({
     path: path.join(outputDirectory, "iphone-today.png"),
@@ -59,6 +60,7 @@ async function capture() {
     window.localStorage.getItem("ciji-vocabulary-state-v2"),
   );
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "背词" }).click();
   const storedAfterReload = await page.evaluate(() =>
     window.localStorage.getItem("ciji-vocabulary-state-v2"),
   );
@@ -70,7 +72,7 @@ async function capture() {
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: "计划" }).click();
+  await page.getByRole("button", { name: "设置" }).click();
   await page.waitForTimeout(250);
   await page.screenshot({
     path: path.join(outputDirectory, "iphone-plan.png"),
@@ -114,7 +116,7 @@ async function capture() {
     fullPage: true,
   });
 
-  await page.getByRole("button", { name: "今日" }).click();
+  await page.getByRole("button", { name: "背词" }).click();
   await page.evaluate(() => {
     const key = "ciji-vocabulary-state-v2";
     const raw = window.localStorage.getItem(key);
@@ -125,6 +127,7 @@ async function capture() {
     window.localStorage.setItem(key, JSON.stringify(state));
   });
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "背词" }).click();
   await page.locator(".word-card").waitFor();
   await page.evaluate(() => {
     const key = "ciji-vocabulary-state-v2";
@@ -146,6 +149,7 @@ async function capture() {
     window.localStorage.setItem(key, JSON.stringify(state));
   });
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "背词" }).click();
   await page.locator(".word-card").waitFor();
   await page.getByRole("button", { name: "阅读", exact: true }).click();
   await page.locator(".daily-reading-card").waitFor();
@@ -210,7 +214,7 @@ async function capture() {
   await context.setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded" });
   const offlineReady = await page
-    .locator(".word-card")
+    .locator(".ielts-screen")
     .waitFor({ timeout: 5_000 })
     .then(() => true)
     .catch(() => false);
@@ -230,6 +234,7 @@ async function capture() {
   await darkPage.goto(baseUrl, {
     waitUntil: "domcontentloaded",
   });
+  await darkPage.getByRole("button", { name: "背词" }).click();
   await darkPage.locator(".word-card").waitFor();
   await darkPage.screenshot({
     path: path.join(outputDirectory, "iphone-dark.png"),

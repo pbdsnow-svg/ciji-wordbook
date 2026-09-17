@@ -6,9 +6,9 @@ export default function manifest(): MetadataRoute.Manifest {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
   return {
-    name: "词迹 · 随身单词卡",
-    short_name: "词迹",
-    description: "安静、离线、属于你自己的随身单词卡册。",
+    name: "词迹 · 雅思 30 天重启",
+    short_name: "雅思重启",
+    description: "每天 120 分钟的雅思全科重启训练，并保留离线词汇与语境复习。",
     start_url: `${basePath}/`,
     scope: `${basePath}/`,
     display: "standalone",

@@ -125,6 +125,30 @@ describe("learning helpers", () => {
     expect(metrics.day).toBe(1);
   });
 
+  it("lets IELTS vocabulary override today's count without deleting an active plan", () => {
+    const now = new Date("2026-09-17T08:00:00+08:00");
+    const plan = createStudyPlan(
+      { name: "原来的计划", level: "A2", durationDays: 30, dailyNewWords: 8 },
+      now,
+    );
+    const state = {
+      ...createInitialState(now),
+      words: [],
+      settings: {
+        ...createInitialState(now).settings,
+        activePlan: plan,
+        selectedLevel: "B2" as const,
+        ieltsDailyGoal: 50,
+      },
+    };
+    const next = ensureDailyWords(state, now);
+
+    expect(next.settings.activePlan?.id).toBe(plan.id);
+    expect(getDailyLearningProgress(next, now).target).toBe(50);
+    expect(next.words).toHaveLength(50);
+    expect(next.words.every((word) => ["A1", "A2", "B1", "B2"].includes(word.level))).toBe(true);
+  });
+
   it("builds unique cloze choices that always include the answer", () => {
     const now = new Date("2026-08-03T08:00:00+08:00");
     const state = ensureDailyWords(

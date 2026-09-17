@@ -5,15 +5,15 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export const metadata: Metadata = {
   title: {
-    default: "词迹",
-    template: "%s · 词迹",
+    default: "词迹 · 雅思重启",
+    template: "%s · 雅思重启",
   },
-  description: "安静、离线、属于你自己的随身单词卡册。",
-  applicationName: "词迹",
+  description: "每天 120 分钟，完成词汇、听力、阅读、口语与写作的 30 天雅思重启训练。",
+  applicationName: "雅思重启",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "词迹",
+    title: "雅思重启",
   },
   formatDetection: {
     telephone: false,

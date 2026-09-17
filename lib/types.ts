@@ -57,6 +57,7 @@ export interface AppSettings {
   dailyGoal: number;
   selectedLevel: CEFRLevel;
   activePlan: StudyPlan | null;
+  ieltsDailyGoal?: number;
 }
 
 export interface VocabularyState {

@@ -66,6 +66,7 @@ async function run() {
 
   markProgress("opening app");
   await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "背词" }).click();
   markProgress("waiting for today's word card");
   await page.locator(".word-card").waitFor();
   await page.evaluate(() => {
@@ -77,6 +78,7 @@ async function run() {
   });
   markProgress("reloading daily goal");
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "背词" }).click();
   await page.locator(".word-card").waitFor();
   await page.evaluate(() => {
     const key = "ciji-vocabulary-state-v2";
@@ -97,6 +99,7 @@ async function run() {
   });
   markProgress("reloading studied words");
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "背词" }).click();
   await page.locator(".word-card").waitFor();
   await page.getByRole("button", { name: "阅读", exact: true }).click();
   await page.getByRole("button", { name: "复习练习" }).click();

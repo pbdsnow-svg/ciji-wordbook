@@ -114,8 +114,13 @@ export function ensureDailyWords(
   now = new Date(),
 ): VocabularyState {
   const activePlan = state.settings.activePlan;
-  const level = activePlan?.level ?? state.settings.selectedLevel;
-  const dailyTarget = activePlan?.dailyNewWords ?? state.settings.dailyGoal;
+  const level = state.settings.ieltsDailyGoal
+    ? state.settings.selectedLevel
+    : activePlan?.level ?? state.settings.selectedLevel;
+  const dailyTarget =
+    state.settings.ieltsDailyGoal ??
+    activePlan?.dailyNewWords ??
+    state.settings.dailyGoal;
   const introducedToday = state.words.filter(
     (word) =>
       (word.source === "cefr" || word.source === "seed") &&
@@ -124,7 +129,7 @@ export function ensureDailyWords(
   const missing = Math.max(dailyTarget - introducedToday, 0);
   if (missing === 0) return state;
 
-  if (activePlan) {
+  if (activePlan && !state.settings.ieltsDailyGoal) {
     const metrics = getPlanMetrics(activePlan, state, now);
     if (metrics.isComplete || metrics.isExpired) return state;
   }
@@ -144,7 +149,7 @@ export function ensureDailyWords(
   });
 
   let limit = missing;
-  if (activePlan) {
+  if (activePlan && !state.settings.ieltsDailyGoal) {
     const metrics = getPlanMetrics(activePlan, state, now);
     limit = Math.min(limit, Math.max(metrics.target - metrics.introduced, 0));
   }
@@ -178,7 +183,9 @@ export function getDailyLearningProgress(
   now = new Date(),
 ): { target: number; introduced: number; completed: number } {
   const target =
-    state.settings.activePlan?.dailyNewWords ?? state.settings.dailyGoal;
+    state.settings.ieltsDailyGoal ??
+    state.settings.activePlan?.dailyNewWords ??
+    state.settings.dailyGoal;
   const targetWordIds = new Set(
     state.words
       .filter(

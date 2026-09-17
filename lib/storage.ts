@@ -40,6 +40,7 @@ function migrateState(value: unknown): VocabularyState {
       dailyGoal: parsed.settings?.dailyGoal ?? 8,
       selectedLevel: parsed.settings?.selectedLevel ?? "B1",
       activePlan: parsed.settings?.activePlan ?? null,
+      ieltsDailyGoal: parsed.settings?.ieltsDailyGoal,
     },
   };
 }

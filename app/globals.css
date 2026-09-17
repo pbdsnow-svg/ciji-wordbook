@@ -1252,7 +1252,7 @@ button:disabled {
 }
 
 .tab-bar {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .word-row-meta {
@@ -2564,5 +2564,507 @@ button:disabled {
   to {
     opacity: 0.45;
     transform: scale(0.88);
+  }
+}
+
+/* IELTS training prescription */
+
+.ielts-screen {
+  padding-top: max(20px, env(safe-area-inset-top));
+}
+
+.ielts-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.ielts-header h1 {
+  font-size: clamp(42px, 13vw, 62px);
+  letter-spacing: -0.065em;
+  line-height: 0.96;
+  margin: 8px 0 9px;
+}
+
+.ielts-header > div:first-child > p:last-child {
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin: 0;
+  max-width: 440px;
+}
+
+.day-seal {
+  align-items: baseline;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  display: flex;
+  flex: 0 0 auto;
+  height: 66px;
+  justify-content: center;
+  margin-top: 2px;
+  transform: rotate(3deg);
+  width: 66px;
+}
+
+.day-seal strong {
+  color: var(--blue-ink);
+  font-family: ui-serif, Georgia, "Songti SC", serif;
+  font-size: 27px;
+}
+
+.day-seal span {
+  color: var(--pencil);
+  font-size: 10px;
+}
+
+.ielts-progress {
+  background: var(--blue-wash);
+  border-radius: var(--radius-group);
+  margin-bottom: 14px;
+  padding: 15px 17px;
+}
+
+.ielts-progress > div:first-child {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.ielts-progress span {
+  color: var(--blue-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ielts-progress strong {
+  font-size: 18px;
+}
+
+.ielts-progress strong small {
+  color: var(--pencil);
+  font-size: 12px;
+}
+
+.ielts-progress .progress-track {
+  background: color-mix(in srgb, var(--blue-ink) 15%, transparent);
+}
+
+.phase-strip {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 19px;
+}
+
+.phase-strip span {
+  align-items: center;
+  color: var(--pencil-faint);
+  display: flex;
+  font-size: 11px;
+  font-weight: 650;
+  gap: 5px;
+  min-height: 34px;
+}
+
+.phase-strip b {
+  align-items: center;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  display: inline-flex;
+  font-size: 10px;
+  height: 22px;
+  justify-content: center;
+  width: 22px;
+}
+
+.phase-strip .is-current {
+  color: var(--blue-ink);
+}
+
+.phase-strip .is-current b {
+  background: var(--blue-ink);
+  border-color: var(--blue-ink);
+  color: var(--card-stock);
+}
+
+.phase-strip .is-past {
+  color: var(--memory-green);
+}
+
+.phase-strip .is-past b {
+  background: var(--memory-wash);
+  border-color: transparent;
+}
+
+.ielts-task-list {
+  background: var(--card-stock);
+  border-radius: var(--radius-card);
+  box-shadow: var(--small-shadow);
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+
+.ielts-task + .ielts-task {
+  border-top: 1px solid var(--rule);
+}
+
+.ielts-task-summary {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  display: grid;
+  gap: 13px;
+  grid-template-columns: 48px minmax(0, 1fr) 30px;
+  min-height: 90px;
+  padding: 13px 13px 13px 15px;
+  text-align: left;
+  width: 100%;
+}
+
+.task-time {
+  align-items: baseline;
+  color: var(--blue-ink);
+  display: flex;
+  flex-direction: column;
+  font-family: ui-serif, Georgia, "Songti SC", serif;
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.task-time small {
+  color: var(--pencil);
+  font-family: var(--font-system);
+  font-size: 9px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.task-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.task-copy > small {
+  color: var(--blue-ink);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+}
+
+.task-copy strong {
+  font-size: 16px;
+  letter-spacing: -0.015em;
+}
+
+.task-copy > span {
+  color: var(--pencil);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.task-state {
+  align-items: center;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  color: var(--pencil);
+  display: flex;
+  font-size: 17px;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.ielts-task.is-complete .task-state {
+  background: var(--memory-green);
+  border-color: var(--memory-green);
+  color: var(--card-stock);
+}
+
+.ielts-task.is-complete .task-copy strong {
+  color: var(--memory-green);
+}
+
+.ielts-task-detail {
+  animation: answer-arrive 180ms var(--ease-respond);
+  border-top: 1px dashed var(--rule);
+  margin: 0 15px;
+  padding: 15px 0 18px;
+}
+
+.ielts-task-detail ol {
+  counter-reset: task-step;
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0 0 15px;
+  padding: 0;
+}
+
+.ielts-task-detail li {
+  align-items: flex-start;
+  color: var(--ink-soft);
+  display: flex;
+  font-size: 14px;
+  gap: 9px;
+  line-height: 1.45;
+}
+
+.ielts-task-detail li::before {
+  align-items: center;
+  background: var(--paper-deep);
+  border-radius: 50%;
+  color: var(--pencil);
+  content: counter(task-step);
+  counter-increment: task-step;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 10px;
+  height: 22px;
+  justify-content: center;
+  margin-top: 1px;
+  width: 22px;
+}
+
+.training-note-field {
+  display: grid;
+  gap: 6px;
+}
+
+.training-note-field > span {
+  color: var(--pencil);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.training-note-field textarea,
+.night-english textarea,
+.score-inputs input {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-control);
+  font-size: 16px;
+  line-height: 1.5;
+  padding: 11px 12px;
+  resize: vertical;
+  width: 100%;
+}
+
+.task-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 13px;
+}
+
+.task-actions > :only-child {
+  grid-column: 1 / -1;
+}
+
+.task-undo-button {
+  background: var(--memory-wash);
+  border: 0;
+  border-radius: 999px;
+  color: var(--memory-green);
+  font-weight: 650;
+  min-height: 50px;
+}
+
+.score-panel,
+.night-english {
+  background: var(--card-stock);
+  border-radius: var(--radius-group);
+  box-shadow: var(--small-shadow);
+  margin-bottom: 18px;
+  padding: 18px;
+}
+
+.score-panel h2,
+.night-english h2 {
+  font-size: 19px;
+  margin: 3px 0 0;
+}
+
+.score-inputs {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr;
+  margin: 15px 0 12px;
+}
+
+.score-inputs label {
+  display: grid;
+  gap: 5px;
+}
+
+.score-inputs span {
+  color: var(--pencil);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.night-english > div {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+
+.night-english > div > span {
+  align-items: center;
+  background: var(--blue-wash);
+  border-radius: 50%;
+  color: var(--blue-ink);
+  display: flex;
+  flex: 0 0 auto;
+  font-family: ui-serif, Georgia, "Songti SC", serif;
+  font-size: 24px;
+  font-weight: 700;
+  height: 46px;
+  justify-content: center;
+  width: 46px;
+}
+
+.night-english p {
+  color: var(--pencil);
+  font-size: 12px;
+  margin: 2px 0 0;
+}
+
+.finish-day-button {
+  background: var(--blue-ink);
+  border: 0;
+  border-radius: 999px;
+  color: #fffdf8;
+  font-weight: 700;
+  min-height: 54px;
+  padding: 0 20px;
+  width: 100%;
+}
+
+.finish-day-button:disabled {
+  background: var(--paper-deep);
+  color: var(--pencil);
+  opacity: 1;
+}
+
+.program-finish-note {
+  background: var(--memory-wash);
+  border-radius: var(--radius-group);
+  color: var(--memory-green);
+  display: grid;
+  gap: 3px;
+  margin-bottom: 14px;
+  padding: 16px;
+}
+
+.program-finish-note span {
+  font-size: 12px;
+}
+
+.roadmap-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  min-height: 70px;
+  padding: 8px 2px;
+  text-align: left;
+  width: 100%;
+}
+
+.roadmap-toggle > span {
+  display: grid;
+  gap: 3px;
+}
+
+.roadmap-toggle strong {
+  font-size: 16px;
+}
+
+.roadmap-toggle small,
+.ielts-disclaimer {
+  color: var(--pencil);
+  font-size: 11px;
+}
+
+.roadmap-toggle > b {
+  color: var(--blue-ink);
+  font-size: 22px;
+}
+
+.month-roadmap {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0 0;
+}
+
+.month-roadmap li {
+  align-items: flex-start;
+  display: grid;
+  gap: 13px;
+  grid-template-columns: 54px 1fr;
+  padding: 13px 2px;
+  position: relative;
+}
+
+.month-roadmap li + li {
+  border-top: 1px solid var(--rule);
+}
+
+.month-roadmap li > span {
+  color: var(--pencil);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.month-roadmap li > div {
+  display: grid;
+  gap: 2px;
+}
+
+.month-roadmap strong {
+  font-size: 14px;
+}
+
+.month-roadmap small {
+  color: var(--pencil);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.month-roadmap .is-active > span,
+.month-roadmap .is-active strong {
+  color: var(--blue-ink);
+}
+
+.ielts-disclaimer {
+  line-height: 1.55;
+  margin: 15px auto 0;
+  max-width: 330px;
+  text-align: center;
+}
+
+@media (max-width: 380px) {
+  .ielts-task-summary {
+    gap: 10px;
+    grid-template-columns: 43px minmax(0, 1fr) 28px;
+    padding-left: 12px;
+  }
+
+  .task-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .phase-strip span {
+    font-size: 10px;
+    gap: 3px;
   }
 }
