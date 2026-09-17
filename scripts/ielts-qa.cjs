@@ -9,7 +9,7 @@ async function run() {
   fs.mkdirSync(outputDirectory, { recursive: true });
   const browser = await chromium.launch({
     args: ["--no-proxy-server"],
-    headless: true,
+    headless: process.env.QA_HEADLESS !== "false",
     executablePath: process.env.QA_BROWSER_PATH,
   });
   const context = await browser.newContext({
@@ -19,16 +19,55 @@ async function run() {
     hasTouch: true,
     userAgent:
       "Mozilla/5.0 (iPhone; CPU iPhone OS 26_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
+    ...(process.env.QA_SITES_BYPASS_TOKEN
+      ? {
+          extraHTTPHeaders: {
+            "OAI-Sites-Authorization": `Bearer ${process.env.QA_SITES_BYPASS_TOKEN}`,
+          },
+        }
+      : {}),
   });
   const page = await context.newPage();
   const errors = [];
+  const networkErrors = [];
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));
+  page.on("requestfailed", (request) =>
+    networkErrors.push(`${request.failure()?.errorText || "failed"} ${request.url()}`),
+  );
+  page.on("response", (response) => {
+    if (response.url().startsWith(baseUrl) && response.status() >= 400) {
+      networkErrors.push(`${response.status()} ${response.url()}`);
+    }
+  });
 
-  await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "Day 1" }).waitFor();
+  await page.goto(baseUrl, { waitUntil: "domcontentloaded" });
+  const appReady = await page
+    .getByRole("heading", { name: "Day 1" })
+    .waitFor({ timeout: 15_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!appReady) {
+    console.log(
+      JSON.stringify(
+        {
+          appReady,
+          url: page.url(),
+          title: await page.title(),
+          body: (await page.locator("body").innerText()).slice(0, 300),
+          errors,
+          networkErrors,
+        },
+        null,
+        2,
+      ),
+    );
+    await browser.close();
+    process.exitCode = 1;
+    return;
+  }
   await page.screenshot({ path: path.join(outputDirectory, "ielts-day-1.png"), fullPage: true });
 
   const taskCount = await page.locator(".ielts-task").count();
@@ -49,10 +88,10 @@ async function run() {
   await page.getByRole("button", { name: "训练" }).click();
   await page.getByRole("heading", { name: "Day 1" }).waitFor();
 
-  console.log(JSON.stringify({ taskCount, totalMinutes, overflow, progressAfterOne, persisted, errors }, null, 2));
+  console.log(JSON.stringify({ taskCount, totalMinutes, overflow, progressAfterOne, persisted, errors, networkErrors }, null, 2));
   await browser.close();
 
-  if (taskCount !== 4 || totalMinutes !== 120 || overflow || !persisted || errors.length) {
+  if (taskCount !== 4 || totalMinutes !== 120 || overflow || !persisted || errors.length || networkErrors.length) {
     process.exitCode = 1;
   }
 }
@@ -61,4 +100,3 @@ run().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
