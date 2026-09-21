@@ -267,7 +267,7 @@ async function capture() {
   await browser.close();
 
   if (
-    consoleErrors.length > 0 ||
+    onlineConsoleErrors.length > 0 ||
     undersizedTargets.length > 0 ||
     !report.persistence ||
     !report.definitionFound ||

@@ -1,4 +1,4 @@
-const CACHE_NAME = "ciji-shell-v8";
+const CACHE_NAME = "ciji-shell-v9";
 const APP_ROOT = new URL("./", self.location.href).pathname;
 const APP_SHELL = [
   APP_ROOT,
@@ -41,9 +41,11 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(APP_ROOT, copy));
+        .then(async (response) => {
+          if (response.ok) {
+            const cache = await caches.open(CACHE_NAME);
+            await cache.put(APP_ROOT, response.clone());
+          }
           return response;
         })
         .catch(() => caches.match(APP_ROOT)),

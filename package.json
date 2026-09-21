@@ -8,7 +8,7 @@
     "dev": "vinext dev",
     "build": "vinext build && node scripts/copy-hosting-config.cjs",
     "start": "vinext start",
-    "test": "vitest run",
+    "test": "vitest run && node scripts/service-worker-cache-qa.cjs",
     "test:rollover": "node scripts/daily-rollover-qa.cjs",
     "typecheck": "tsc --noEmit"
   },

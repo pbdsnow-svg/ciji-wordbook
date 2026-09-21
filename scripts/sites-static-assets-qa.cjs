@@ -5,6 +5,10 @@ const root = path.resolve(
   process.env.SITES_STATIC_DIR || path.join(__dirname, "..", "out"),
 );
 const htmlPath = path.join(root, "index.html");
+const expectedBasePath = (process.env.EXPECTED_BASE_PATH || "").replace(
+  /\/$/,
+  "",
+);
 
 if (!fs.existsSync(htmlPath)) {
   console.error(`Missing static entrypoint: ${htmlPath}`);
@@ -23,15 +27,24 @@ const references = [...html.matchAll(/(?:src|href)="([^"]+)"/g)]
 const uniqueReferences = [...new Set(references)];
 const missing = uniqueReferences.filter((reference) => {
   const pathname = decodeURIComponent(reference.split(/[?#]/, 1)[0]);
-  const localPath = path.join(root, ...pathname.split("/").filter(Boolean));
+  const relativePath = expectedBasePath
+    ? pathname.replace(new RegExp(`^${expectedBasePath}/?`), "")
+    : pathname;
+  const localPath = path.join(
+    root,
+    ...relativePath.split("/").filter(Boolean),
+  );
   return !fs.existsSync(localPath);
 });
 const wrongBasePath = uniqueReferences.filter((reference) =>
-  reference.startsWith("/ciji-wordbook/"),
+  expectedBasePath
+    ? !reference.startsWith(`${expectedBasePath}/`)
+    : reference.startsWith("/ciji-wordbook/"),
 );
 
 const report = {
   root,
+  expectedBasePath,
   checked: uniqueReferences.length,
   missing: missing.slice(0, 8),
   wrongBasePath: wrongBasePath.slice(0, 8),
@@ -43,4 +56,3 @@ if (missing.length || wrongBasePath.length) {
   console.error("Sites static asset check failed.");
   process.exit(1);
 }
-
