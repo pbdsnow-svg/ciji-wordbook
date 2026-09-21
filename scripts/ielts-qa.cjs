@@ -30,13 +30,19 @@ async function run() {
   const page = await context.newPage();
   const errors = [];
   const networkErrors = [];
+  const pendingRequests = new Set();
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
   page.on("pageerror", (error) => errors.push(error.message));
-  page.on("requestfailed", (request) =>
-    networkErrors.push(`${request.failure()?.errorText || "failed"} ${request.url()}`),
-  );
+  page.on("request", (request) => pendingRequests.add(request.url()));
+  page.on("requestfinished", (request) => pendingRequests.delete(request.url()));
+  page.on("requestfailed", (request) => {
+    pendingRequests.delete(request.url());
+    networkErrors.push(
+      `${request.failure()?.errorText || "failed"} ${request.url()}`,
+    );
+  });
   page.on("response", (response) => {
     if (response.url().startsWith(baseUrl) && response.status() >= 400) {
       networkErrors.push(`${response.status()} ${response.url()}`);
@@ -50,6 +56,13 @@ async function run() {
     .then(() => true)
     .catch(() => false);
   if (!appReady) {
+    const resources = await page.evaluate(() =>
+      performance.getEntriesByType("resource").map((entry) => ({
+        name: entry.name,
+        duration: Math.round(entry.duration),
+        transferSize: entry.transferSize,
+      })),
+    );
     console.log(
       JSON.stringify(
         {
@@ -59,6 +72,8 @@ async function run() {
           body: (await page.locator("body").innerText()).slice(0, 300),
           errors,
           networkErrors,
+          pendingRequests: [...pendingRequests],
+          resources,
         },
         null,
         2,
